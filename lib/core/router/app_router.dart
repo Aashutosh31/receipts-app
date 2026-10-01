@@ -1,54 +1,83 @@
+// Centralized routing with auth guards. The redirect handles only
+// authentication (synchronous session check); contract onboarding gating
+// lives in [GateScreen], which can load async state.
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-/// Stage 1 foundation router. Feature routes (contract, ledger, letters,
-/// squads) land in later stages. This keeps navigation centralized so UI
-/// never touches Supabase directly (AGENTS.md architecture).
-final GoRouter appRouter = GoRouter(
-  initialLocation: '/',
-  routes: <RouteBase>[
-    GoRoute(
-      path: '/',
-      name: 'home',
-      builder: (BuildContext context, GoRouterState state) {
-        return const Scaffold(body: SafeArea(child: _FoundationHome()));
-      },
-    ),
-  ],
-  errorBuilder: (BuildContext context, GoRouterState state) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          'Route not found: ${state.matchedLocation}',
-          semanticsLabel: 'Route not found',
-        ),
+import '../../features/auth/presentation/auth_providers.dart';
+import '../../features/auth/presentation/auth_screen.dart';
+import '../../features/contract/presentation/onboarding_screen.dart';
+import '../../features/ledger/presentation/app_shell.dart';
+import '../../features/ledger/presentation/ledger_screen.dart';
+import '../../features/ledger/presentation/today_screen.dart';
+
+final appRouterProvider = Provider<GoRouter>((Ref ref) {
+  final auth = ref.watch(authRepositoryProvider);
+  final AuthRefreshNotifier refresh = ref.watch(authRefreshProvider);
+  return GoRouter(
+    initialLocation: '/',
+    refreshListenable: refresh,
+    redirect: (BuildContext context, GoRouterState state) {
+      final bool signedIn = auth.currentSession != null;
+      final String location = state.matchedLocation;
+      final bool isAuthRoute = location == '/signin' || location == '/signup';
+      if (!signedIn) {
+        return isAuthRoute ? null : '/signin';
+      }
+      if (isAuthRoute) {
+        return '/';
+      }
+      return null;
+    },
+    routes: <RouteBase>[
+      GoRoute(
+        path: '/signin',
+        name: 'signin',
+        builder: (BuildContext context, GoRouterState state) =>
+            const AuthScreen(mode: AuthMode.signIn),
       ),
-    );
-  },
-);
-
-class _FoundationHome extends StatelessWidget {
-  const _FoundationHome();
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: <Widget>[
-        Text(
-          'Receipts',
-          style: theme.textTheme.displaySmall,
-          semanticsLabel: 'Receipts home',
+      GoRoute(
+        path: '/signup',
+        name: 'signup',
+        builder: (BuildContext context, GoRouterState state) =>
+            const AuthScreen(mode: AuthMode.signUp),
+      ),
+      GoRoute(
+        path: '/',
+        name: 'gate',
+        builder: (BuildContext context, GoRouterState state) =>
+            const GateScreen(),
+      ),
+      GoRoute(
+        path: '/contract/new',
+        name: 'onboarding',
+        builder: (BuildContext context, GoRouterState state) =>
+            const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/today',
+        name: 'today',
+        builder: (BuildContext context, GoRouterState state) =>
+            const TodayScreen(),
+      ),
+      GoRoute(
+        path: '/ledger',
+        name: 'ledger',
+        builder: (BuildContext context, GoRouterState state) =>
+            const LedgerScreen(),
+      ),
+    ],
+    errorBuilder: (BuildContext context, GoRouterState state) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            'Route not found: ${state.matchedLocation}',
+            semanticsLabel: 'Route not found',
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Stage 1: foundation ready. Connect Supabase to start your contract.',
-          style: theme.textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 24),
-        Text('Consistency, not punishment.', style: theme.textTheme.bodyMedium),
-      ],
-    );
-  }
-}
+      );
+    },
+  );
+});

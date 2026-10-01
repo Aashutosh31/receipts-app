@@ -63,3 +63,60 @@ class Commitment {
 
   bool get isRetired => retiredAt != null;
 }
+
+/// One row of the public.pauses table: a declared sick/injury pause.
+/// Recorded visibly in the Ledger; never breaks the streak.
+class Pause {
+  const Pause({
+    required this.id,
+    required this.contractId,
+    required this.userId,
+    required this.type,
+    required this.startDay,
+    this.endDay,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String contractId;
+  final String userId;
+
+  /// 'sick' or 'injury', matching the database check constraint.
+  final String type;
+  final DateTime startDay;
+  final DateTime? endDay;
+  final DateTime createdAt;
+
+  bool get isOpen => endDay == null;
+
+  bool covers(DateTime day) {
+    final DateTime target = DateTime.utc(day.year, day.month, day.day);
+    final DateTime start = DateTime.utc(
+      startDay.year,
+      startDay.month,
+      startDay.day,
+    );
+    if (target.isBefore(start)) {
+      return false;
+    }
+    if (endDay == null) {
+      return true;
+    }
+    final DateTime end = DateTime.utc(endDay!.year, endDay!.month, endDay!.day);
+    return !target.isAfter(end);
+  }
+
+  factory Pause.fromMap(Map<String, dynamic> map) {
+    return Pause(
+      id: map['id'] as String,
+      contractId: map['contract_id'] as String,
+      userId: map['user_id'] as String,
+      type: map['type'] as String,
+      startDay: DateTime.parse(map['start_day'] as String).toUtc(),
+      endDay: map['end_day'] == null
+          ? null
+          : DateTime.parse(map['end_day'] as String).toUtc(),
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+}

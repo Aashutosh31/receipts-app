@@ -37,12 +37,37 @@
   defense-in-depth), backdated inserts rejected, letter body hidden
   pre-unlock via `get_letters()`.
 
-## Next (Stage 2+, do NOT build yet)
+## Done (Stage 2: working MVP)
 
-- Auth UI (email), contract lock-in flow using
-  `create_contract_with_commitments`, daily check-in + excuse UI, ledger
-  screen backed by `get_ledger`/`get_streak`, letters UI via `get_letters`,
-  local notifications (Stage 4+), drift cache (Stage 5 only).
+- Auth: email/password sign up (with email-confirmation pending state),
+  sign in, sign out with confirm, persistent session via supabase_flutter,
+  auth-guarded routes (`/signin`, `/signup` public; everything else requires
+  a session; first-time users land on `/contract/new`).
+- Onboarding "Sign the Contract": 3-5 commitments (title + optional
+  HH:MM target time), Hard/Kind Mode cards with plain-language explanations,
+  pledge screen showing the 90-day end date, signed by typing a name. Writes
+  atomically via `create_contract_with_commitments`.
+- Today screen: server-truth day number (`get_streak.today`), streak header,
+  honest status line, per-commitment Done buttons behind a "final, cannot be
+  edited" confirm sheet, pause declare/end entry, sign out.
+- Ledger screen: 90-day read-only grid (kept/missed/paused/upcoming + legend,
+  today outlined), tap-a-day sheet with promised vs done per commitment.
+- Missed-day flow: on app open, unexcused misses inside the 48h window open a
+  required, non-dismissible "Tag your excuse" sheet (5 reasons + optional
+  280-char note) stepping through each miss.
+- Sick/Injury mode: declare from today (sick/injury), end an open pause;
+  paused days render visibly in Today and Ledger and never break the streak.
+- Reusable `core/widgets`: Loading/Error/Empty states on every screen,
+  AppButton, final-confirm sheet, StatusChip, bottom nav.
+- Tests: 52 green, including mocked-repository Today widget tests (fakes
+  implement the repository interfaces via ProviderScope overrides).
+- Quality gates green: pub get, format, analyze (zero), test, debug APK.
+
+## Next (Stage 3+, do NOT build yet)
+
+- Letters UI (write day-1 letter, unlock views on days 30/60/90 via
+  `get_letters`), excuse analytics (top excuse with counts), local
+  notifications (Stage 4+), drift cache (Stage 5 only), squads (later).
 
 ## How to run
 
@@ -50,6 +75,21 @@
 flutter pub get
 flutter run --dart-define-from-file=env.json
 ```
+
+### On an Android emulator
+
+1. Create an emulator (Android Studio → Device Manager, or):
+   ```sh
+   flutter emulators --create
+   flutter emulators --launch <emulator_id>
+   ```
+2. Confirm it is visible: `flutter devices`
+3. Run the app on it (first run grants no special permissions):
+   ```sh
+   flutter run --dart-define-from-file=env.json -d <emulator_id>
+   ```
+4. If the Gradle build fails under Java 27, prefix the run command with
+   `JAVA_HOME=/home/aashutosh31/development/jdk17` (see Known issues).
 
 ## Known issues
 

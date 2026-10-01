@@ -1,4 +1,22 @@
-# Decisions
+## Stage 2 (2026-10-02)
+
+1. **Auth guard shape**: go_router `redirect` handles only the synchronous
+   session check; contract onboarding gating lives in `GateScreen`, which
+   loads the active contract async and navigates post-frame. Keeps slow
+   queries out of navigation.
+2. **Today rows use `done`, not `status`**: for the current day the SQL
+   `status` is `missed` until a check-in exists, but the UI says "Not yet
+   logged today" — a day is only a miss once it is over.
+3. **Done is disabled while paused**: a paused day carries no obligation, so
+   the Today list shows a rest banner instead of active Done buttons.
+4. **Excuse sheet is required**: it is non-dismissible and steps through
+   every pending miss; the client uses a 2-calendar-day approximation of the
+   48h window while the database trigger enforces the exact deadline.
+5. **Onboarding start date**: the pledge screen previews the end date from
+   the device date, but the server sets the real `start_date` on insert
+   (AGENTS.md server-truth rule); the RPC overwrites `end_date`.
+6. **No letters/excuse-analytics/squads/notifications**: excluded per the
+   Stage 2 brief; the unused Stage 1 `ExcuseAnalytics` helper stays for later.
 
 ## Stage 1 (2026-10-01)
 

@@ -36,7 +36,7 @@ class ReceiptsApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Receipts',
       theme: AppTheme.dark,
-      routerConfig: appRouter,
+      routerConfig: ref.watch(appRouterProvider),
       builder: (BuildContext context, Widget? child) {
         return MediaQuery(
           data: MediaQuery.of(context)
