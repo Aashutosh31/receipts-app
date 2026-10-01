@@ -28,6 +28,14 @@
   date/time grace logic.
 - Docs: `docs/SUPABASE_SETUP.md`, `docs/rls_tests.sql`, `docs/DECISIONS.md`.
 - Quality gates green: pub get, format, analyze, test, debug APK.
+- Live Supabase verification (owner, 2026-10-01, commit `cdab315`): all 5
+  migrations applied via `supabase db push`, all 8 tables present, Email auth
+  enabled, `env.json` holds only URL + anon key. Corrected
+  `docs/rls_tests.sql` ran green in the SQL Editor: cross-user reads return
+  0 rows, check_ins UPDATE/DELETE affect 0 rows (RLS has no UPDATE/DELETE
+  policies; trigger `trg_check_ins_no_update` verified present as
+  defense-in-depth), backdated inserts rejected, letter body hidden
+  pre-unlock via `get_letters()`.
 
 ## Next (Stage 2+, do NOT build yet)
 
@@ -45,10 +53,8 @@ flutter run --dart-define-from-file=env.json
 
 ## Known issues
 
-- `docs/rls_tests.sql` needs two real user UUIDs and a manual run in the
-  Supabase SQL Editor (not yet executed against a live project).
-- Docker daemon hung in this sandbox, so no local Postgres round-trip and no
-  `supabase db push` dry-run; migrations are parser-validated only.
+- Docker daemon hung in this sandbox during Stage 1, so migrations were
+  additionally parser-validated (`pglast`) before the live `db push`.
 - `flutter build apk --debug` requires Android SDK (present here); iOS build
   needs macOS/Xcode and is untested.
 - Android builds fail under the default Java 27 (`JAVA_HOME` from mise):

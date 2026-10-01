@@ -45,6 +45,11 @@
    server's current date.
 10. **SQL validation without a live DB**: the sandbox Docker daemon was
     unresponsive, so migrations were validated with the `pglast` Postgres
-    parser (all 5 files parse) plus manual review. `docs/rls_tests.sql` must
-    still be run by the owner in the Supabase SQL Editor (step 6 of
-    SUPABASE_SETUP) before Stage 2.
+    parser (all 5 files parse) plus manual review. Update 2026-10-01: all 5
+    migrations were then applied to the live project via `supabase db push`,
+    and the corrected `docs/rls_tests.sql` ran green in the SQL Editor.
+    Live finding: with SELECT/INSERT-only RLS policies, a forbidden
+    check_ins UPDATE/DELETE affects 0 rows instead of raising, so the test
+    asserts `row_count == 0` (the `trg_check_ins_no_update` trigger remains
+    as defense-in-depth); test cleanup uses ROLLBACK because contracts are
+    delete-protected. See commit `cdab315`.
