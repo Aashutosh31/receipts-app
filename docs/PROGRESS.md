@@ -62,6 +62,12 @@
 - Tests: 52 green, including mocked-repository Today widget tests (fakes
   implement the repository interfaces via ProviderScope overrides).
 - Quality gates green: pub get, format, analyze (zero), test, debug APK.
+- Manual acceptance on a physical Android phone (owner, post-`831a8f2`):
+  fresh auth flow, account creation, confirmation email sent, sign-in,
+  contract lock-in with 3 commitments, Kind Mode, typed-name pledge, Day 1
+  of 90 with correct streak/status, check-ins persisting across reopen,
+  read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
+  tested or built.
 
 ## Next (Stage 3+, do NOT build yet)
 
