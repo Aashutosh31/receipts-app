@@ -1,3 +1,17 @@
+## Auth-cascade delete bypass (production delete-account fix)
+
+1. **Only `supabase_auth_admin` passes the delete blockers**: new migration
+   `20261002170555_auth_cascade_delete.sql` adds a `is_auth_account_cascade()`
+   helper (true only when `current_user` is the internal Auth role) and
+   gates all 9 blanket immutability triggers on it (allow path returns OLD;
+   everyone else keeps the original 25001). Clients, service_role, and owner
+   stay blocked; RLS untouched.
+2. **All 9 blockers had to be gated, not just contracts**: the FK cascade
+   would otherwise die at the next table (commitments, check-ins, ...).
+3. **Regression proof is `docs/cascade_delete_tests.sql`**: user deletes hit
+   0 rows, owner direct deletes still raise 25001, and an auth.users delete
+   as `supabase_auth_admin` cascades cleanly (all rolled back).
+
 ## Stage 5B (squads)
 
 1. **Membership writes go through RPCs only** (`create_squad`, `join_squad`,

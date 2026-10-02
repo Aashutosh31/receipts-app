@@ -69,6 +69,16 @@
   read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
   tested or built.
 
+## Fixed (auth-cascade delete bypass)
+
+- Production delete-account failed with 25001 because the contract
+  immutability trigger (and the 8 sibling blockers) rejected the internal
+  Supabase Auth cascade. New migration
+  `20261002170555_auth_cascade_delete.sql` lets only `supabase_auth_admin`
+  through; RLS, messages, and all other rules unchanged. Proven by
+  `docs/cascade_delete_tests.sql` (owner runs it; rolls back). Edge Function
+  untouched — no separate issue found.
+
 ## Fixed (auth-scoping hotfix)
 
 - Multi-user isolation bug: user-scoped providers survived sign-out/sign-in,
