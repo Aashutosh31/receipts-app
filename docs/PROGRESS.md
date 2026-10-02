@@ -96,6 +96,12 @@
 - Tests: 84 green (message engine, scheduling math incl. midnight/DST edges,
   mocked-repo widget tests incl. settings/permission screens).
 - Quality gates green: pub get, format, analyze (zero), test, debug APK.
+- Native verification via `aapt dump` on the debug APK: merged manifest holds
+  INTERNET, POST_NOTIFICATIONS, VIBRATE, RECEIVE_BOOT_COMPLETED and
+  SCHEDULE_EXACT_ALARM (no USE_EXACT_ALARM) plus both scheduled-notification
+  receivers with boot/update intent filters.
+- No emulator in this sandbox (system-image/emulator downloads stall), so
+  on-device notification delivery still needs the real-phone checklist.
 
 ## Next (Stage 4+, do NOT build yet)
 
