@@ -184,9 +184,12 @@ class _SettingsBody extends ConsumerWidget {
         Text('Per-commitment reminders', style: theme.textTheme.titleMedium),
         const SizedBox(height: 8),
         commitments.maybeWhen(
+          // Display-layer filter only: retired commitments stay available
+          // in the underlying provider for history and scheduling date
+          // math, but get no reminder toggle.
           data: (List<Commitment> items) => Column(
             children: <Widget>[
-              for (final Commitment c in items)
+              for (final Commitment c in items.where((c) => !c.isRetired))
                 SwitchListTile(
                   title: Text(c.title),
                   value: settings.enabledFor(c.id),

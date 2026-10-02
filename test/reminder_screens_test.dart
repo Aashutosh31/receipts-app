@@ -43,6 +43,15 @@ class _FakeContracts implements ContractRepository {
           sortOrder: 0,
           createdAt: DateTime.utc(2026, 10, 1),
         ),
+        Commitment(
+          id: 'c2',
+          contractId: 'contract-1',
+          userId: 'user-1',
+          title: 'Dinner',
+          sortOrder: 1,
+          createdAt: DateTime.utc(2026, 10, 1),
+          retiredAt: DateTime.utc(2026, 10, 3),
+        ),
       ];
 
   @override
@@ -163,7 +172,45 @@ void main() {
 
     expect(find.text('Per-commitment reminders'), findsOneWidget);
     expect(find.text('Run 20 minutes'), findsOneWidget);
+    // Retired commitments get no toggle, even after scrolling the whole
+    // list into view (which would build the row if it were rendered).
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(find.text('Run 20 minutes'), findsOneWidget);
+    expect(find.text('Dinner'), findsNothing);
   });
+
+  test(
+    'retired rows stay available to the provider for history/scheduling',
+    () async {
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(initialUserId: 'user-1'),
+          ),
+          contractRepositoryProvider.overrideWithValue(_FakeContracts()),
+        ],
+      );
+      addTearDown(container.dispose);
+      final ProviderSubscription<AsyncValue<List<Commitment>>> sub = container
+          .listen(commitmentsProvider('contract-1'), (prev, next) {});
+      addTearDown(sub.close);
+
+      final List<Commitment> items = await container.read(
+        commitmentsProvider('contract-1').future,
+      );
+      expect(
+        items.any(
+          (Commitment c) => c.title == 'Run 20 minutes' && !c.isRetired,
+        ),
+        isTrue,
+      );
+      expect(
+        items.any((Commitment c) => c.title == 'Dinner' && c.isRetired),
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('permission flow explains then offers honest fallback', (
     WidgetTester tester,
