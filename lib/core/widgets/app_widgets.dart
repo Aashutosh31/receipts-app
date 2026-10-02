@@ -189,6 +189,7 @@ class ReceiptsNavBar extends StatelessWidget {
     '/ledger',
     '/insights',
     '/letters',
+    '/squads',
   ];
 
   @override
@@ -221,6 +222,11 @@ class ReceiptsNavBar extends StatelessWidget {
           icon: Icon(Icons.mail_outlined),
           selectedIcon: Icon(Icons.mail),
           label: 'Letters',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.group_outlined),
+          selectedIcon: Icon(Icons.group),
+          label: 'Squads',
         ),
       ],
     );

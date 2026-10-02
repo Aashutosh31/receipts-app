@@ -28,7 +28,7 @@ You have two options. Option A is recommended (versioned, repeatable).
    ```
 4. Verify in **Database → Tables** that you see: `profiles`, `contracts`,
    `commitments`, `contract_changes`, `check_ins`, `excuses`, `pauses`,
-   `letters`.
+   `letters`, `squads`, `squad_members`, `nudges`.
 
 ### Option B: via the SQL Editor (no CLI)
 
@@ -40,6 +40,7 @@ You have two options. Option A is recommended (versioned, repeatable).
    3. `20261001020000_ledger.sql`
    4. `20261001030000_letters.sql`
    5. `20261001040000_rpcs.sql`
+   6. `20261002140000_squads.sql`
 3. Each file is idempotent for tables/policies (`if not exists` /
    `drop ... if exists`), so re-running a file is safe.
 
@@ -74,3 +75,7 @@ flutter run --dart-define-from-file=env.json
    It proves: user A cannot read user B's rows; UPDATE/DELETE on `check_ins`
    fails; backdated inserts fail; letter bodies stay hidden before unlock
    (use `get_letters()` instead of direct SELECT on `body`).
+3. With six test users, run `docs/squad_rls_tests.sql` (replace the six
+   UUID placeholders). It proves: non-members read nothing; `squad_feed()`
+   rejects non-members and returns only the 6 allowed columns; the 6th
+   member join fails; the second same-day nudge fails.

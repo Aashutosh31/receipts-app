@@ -21,6 +21,8 @@ import '../../features/letters/presentation/letters_screen.dart';
 import '../../features/offline/presentation/outbox_screen.dart';
 import '../../features/reminders/presentation/permission_screen.dart';
 import '../../features/reminders/presentation/settings_screen.dart';
+import '../../features/squads/presentation/squad_feed_screen.dart';
+import '../../features/squads/presentation/squads_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((Ref ref) {
   final auth = ref.watch(authRepositoryProvider);
@@ -147,6 +149,22 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
         name: 'outbox',
         builder: (BuildContext context, GoRouterState state) =>
             const OutboxScreen(),
+      ),
+      GoRoute(
+        path: '/squads',
+        name: 'squads',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SquadsScreen(),
+      ),
+      GoRoute(
+        path: '/squads/:id',
+        name: 'squad-feed',
+        builder: (BuildContext context, GoRouterState state) {
+          return SquadFeedScreen(
+            squadId: state.pathParameters['id'] ?? '',
+            squadName: state.uri.queryParameters['name'],
+          );
+        },
       ),
     ],
     errorBuilder: (BuildContext context, GoRouterState state) {

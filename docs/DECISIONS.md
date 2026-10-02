@@ -1,3 +1,22 @@
+## Stage 5B (squads)
+
+1. **Membership writes go through RPCs only** (`create_squad`, `join_squad`,
+   `leave_squad`): invite codes must not be enumerable, and creation must
+   atomically add the creator. Tables carry member/owner-gated SELECT
+   policies; squads and memberships have no direct INSERT policies.
+2. **Max 5 enforced by trigger** (`enforce_squad_size`); multiple squads per
+   user allowed (simpler than a one-squad rule, same cap).
+3. **Nudge = 1 per sender per squad per day** via a unique constraint (race
+   safe), with a friendly duplicate message; the single preset text is
+   pinned by a check constraint. Nudge day uses server UTC date, matching
+   the insert default and the `my_nudges_today` lookup.
+4. **Feed privacy by construction**: `squad_feed()` returns exactly 6
+   columns (member id, display name, day number, today status, streak,
+   missed count). Per-member timezone mirrors `get_streak`; members without
+   contracts get null rows rather than being hidden.
+5. **No-contract members keep a disabled Nudge button** (visible, honest)
+   instead of disappearing from the feed.
+
 ## Stage 5A (offline outbox with drift)
 
 1. **drift 2.35.1 + drift_flutter 0.3.1** (codegen via drift_dev +

@@ -151,7 +151,26 @@
   duplicate-as-sent, cache round-trip, per-user isolation).
 - Quality gates green: pub get, format, analyze (zero), test, debug APK.
 
-## Next (Stage 5B/C: squads, release readiness)
+## Done (Stage 5B: squads)
+
+- Migration `20261002140000_squads.sql` (parser-validated; needs live
+  `db push` by owner): `squads` (unique 6-char invite codes),
+  `squad_members` (max 5 via trigger), `nudges` (1 preset message pinned by
+  check, 1 per sender per squad per day via unique constraint, write-once).
+  RLS member/owner-gated; membership writes RPC-only.
+- RPCs: `create_squad` (atomic creator membership + collision-safe codes),
+  `join_squad` (case-insensitive, idempotent), `leave_squad`,
+  `send_nudge` (friendly daily-limit error), `my_nudges_today`, and
+  `squad_feed` returning exactly 6 privacy-safe columns (verified by
+  `docs/squad_rls_tests.sql`: non-member reads 0 rows, feed rejects
+  non-members, 6th join fails, 2nd nudge fails).
+- Squads tab: list, create (shows code once), join-by-code, feed with
+  kept/missed/paused chips + streaks + miss counts, per-member nudge
+  buttons with sent state, leave with confirm.
+- Tests: 129 green (invite validation, feed parsing incl. null rows,
+  faked feed/nudge UI + provider tests).
+
+## Next (Stage 5C: release readiness)
 
 - Drift cache (Stage 5 only), squads (later). Notification-tap deep linking.
 
