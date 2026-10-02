@@ -5,47 +5,46 @@
 --
 -- HOW TO RUN (Supabase SQL Editor, as database owner):
 --   1. Apply all migrations in supabase/migrations/ first.
---   2. Pick ONE throwaway test user for the cascade step below and put
---      their UUID in USER_F_UUID. The script deletes that auth.users row
---      and verifies the cascade, then ROLLS BACK so nothing persists.
---      USER_F is suggested (least used by manual testing).
---   3. Replace USER_F_UUID below with that UUID.
---   4. Run this whole script. Every check prints NOTICE "PASS ...".
+--   2. Pick ONE throwaway test user UUID and replace every occurrence of
+--      9c9e2226-e0d6-45d5-becf-1f57dc528af2 below with it (9 spots: seeded
+--      rows and JWT-claim simulation; this script no longer deletes any
+--      auth row). Any throwaway account works: the setup reuses that
+--      user's existing active contract when one exists, so no
+--      contract-free account is required.
+--   3. Run this whole script. Every check prints NOTICE "PASS ...".
 --      Any unexpected result raises EXCEPTION "FAIL ..." and aborts.
---   5. The whole script runs in one transaction and rolls back at the end.
+--   4. The whole script runs in one transaction and rolls back at the end.
 --
 -- WHAT IT PROVES:
 --   (a) ordinary users still cannot delete contracts (0 rows: no RLS
 --       delete policy);
 --   (b) non-cascade roles (even the owner) still hit the 25001 trigger on
 --       direct contract/check-in deletes;
---   (c) deleting auth.users under a real supabase_auth_admin SESSION
---       (via SET SESSION AUTHORIZATION, superuser-only) cascades through
---       contracts, commitments, and check-ins with no 25001. Plain
---       SET ROLE would only change current_user and stay blocked;
+--   (c) NOT executable in hosted SQL Editor (see note below): the real
+--       end-to-end auth cascade was verified manually with a throwaway
+--       account, which is the authoritative test for the actual Auth path;
 --   (d) the bypass helper keys on session_user (robust to SECURITY DEFINER
 --       hops, which rewrite current_user) and is not definer itself.
 
-\set user_f USER_F_UUID
 
 begin;
 
 -- ---------------------------------------------------------------- setup data
--- Inserted as owner (bypasses RLS). Reuses F's active contract when one
--- already exists so the one-active-contract index never trips.
+-- Inserted as owner (bypasses RLS). Reuses the user's active contract when
+-- one already exists so the one-active-contract index never trips.
 do $$
 declare
   v_contract uuid;
 begin
   select id into v_contract from public.contracts
-  where user_id = :'user_f' and status = 'active'
+  where user_id = '9c9e2226-e0d6-45d5-becf-1f57dc528af2' and status = 'active'
   order by created_at desc limit 1;
 
   if v_contract is null then
     insert into public.contracts (id, user_id, start_date, mode, status)
     values (
       'd0000000-0000-0000-0000-000000000001',
-      :'user_f',
+      '9c9e2226-e0d6-45d5-becf-1f57dc528af2',
       (now()::date) - 5,
       'hard',
       'active'
@@ -56,14 +55,14 @@ begin
     values (
       'd0000000-0000-0000-0000-000000000011',
       'd0000000-0000-0000-0000-000000000001',
-      :'user_f',
+      '9c9e2226-e0d6-45d5-becf-1f57dc528af2',
       'Cascade test commitment',
       0
     )
     on conflict (id) do nothing;
 
     insert into public.check_ins (user_id, commitment_id, day, done)
-    values (:'user_f', 'd0000000-0000-0000-0000-000000000011', (now()::date), true)
+    values ('9c9e2226-e0d6-45d5-becf-1f57dc528af2', 'd0000000-0000-0000-0000-000000000011', (now()::date), true)
     on conflict (commitment_id, day) do nothing;
   end if;
 end;
@@ -73,7 +72,7 @@ $$;
 set role authenticated;
 select set_config(
   'request.jwt.claims',
-  json_build_object('sub', :'user_f', 'role', 'authenticated')::text,
+  json_build_object('sub', '9c9e2226-e0d6-45d5-becf-1f57dc528af2', 'role', 'authenticated')::text,
   true
 );
 
@@ -81,7 +80,7 @@ do $$
 declare
   v_rows integer;
 begin
-  delete from public.contracts where user_id = :'user_f';
+  delete from public.contracts where user_id = '9c9e2226-e0d6-45d5-becf-1f57dc528af2';
   get diagnostics v_rows = row_count;
   if v_rows <> 0 then
     raise exception 'FAIL: user deleted % contract row(s)', v_rows;
@@ -98,7 +97,7 @@ declare
   v_contract uuid;
 begin
   select id into v_contract from public.contracts
-  where user_id = :'user_f' and status = 'active'
+  where user_id = '9c9e2226-e0d6-45d5-becf-1f57dc528af2' and status = 'active'
   order by created_at desc limit 1;
 
   begin
@@ -116,7 +115,7 @@ begin
 
   begin
     delete from public.check_ins
-    where user_id = :'user_f';
+    where user_id = '9c9e2226-e0d6-45d5-becf-1f57dc528af2';
     raise exception 'FAIL: owner check_in delete succeeded';
   exception when others then
     if SQLERRM not like '%insert-only%' then
@@ -127,45 +126,23 @@ begin
 end;
 $$;
 
--- ---------------------- (c) auth cascade deletes through the blockers
--- Supabase Auth deletes auth.users as supabase_auth_admin (see production
--- postgres_logs: db_role supabase_auth_admin, DELETE FROM users).
--- The bypass helper keys on session_user, so this section must change the
--- SESSION identity, not merely SET ROLE (which only rewrites current_user
--- and would still be blocked, exactly like the production failure before
--- the session_user fix). SET SESSION AUTHORIZATION requires superuser;
--- the SQL Editor runs as postgres, so this works here. Everything below
--- still rolls back at the end.
-set session authorization supabase_auth_admin;
-
-do $$
-declare
-  v_contracts integer;
-  v_commitments integer;
-  v_checkins integer;
-begin
-  delete from auth.users where id = :'user_f';
-
-  select count(*) into v_contracts from public.contracts
-  where user_id = :'user_f';
-  select count(*) into v_commitments from public.commitments
-  where user_id = :'user_f';
-  select count(*) into v_checkins from public.check_ins
-  where user_id = :'user_f';
-
-  if v_contracts != 0 or v_commitments != 0 or v_checkins != 0 then
-    raise exception
-      'FAIL: cascade leftovers contracts=% commitments=% check_ins=%',
-      v_contracts, v_commitments, v_checkins;
-  end if;
-  raise notice 'PASS: auth cascade deleted contracts, commitments, check_ins';
-end;
-$$;
-
--- Back to the owner session for the remaining checks. (RESET ROLE alone
--- would not suffice: it restores current_user but leaves session_user
--- switched, which is precisely the distinction under test.)
-reset session authorization;
+-- ---------------------- (c) MANUAL ONLY: real auth-cascade verification
+-- NOT executable here. Simulating the Auth deletion would require a real
+-- supabase_auth_admin SESSION identity, and hosted Supabase rejects both
+-- impersonation routes: SET ROLE changes only current_user (the bypass
+-- helper intentionally ignores it), and SET SESSION AUTHORIZATION fails
+-- with 42501 permission denied in the hosted SQL Editor. There is no
+-- SQL-only way to become supabase_auth_admin from the editor.
+--
+-- Authoritative verification (already performed manually, do not repeat
+-- against real users): with the session_user bypass migration applied,
+-- delete a throwaway account (Dashboard -> Authentication -> Users, or the
+-- app's Settings -> Danger zone flow) and confirm in postgres_logs / table
+-- counts that auth.users, contracts, commitments, check_ins, excuses,
+-- pauses, letters, changes, memberships, and nudges for that user are gone
+-- with no 25001 raised. That manual run is the production proof for the
+-- actual Auth cascade path; sections (a), (b), and (d) below remain the
+-- executable regression checks.
 
 -- -------- (d) bypass helper keys on session_user, stays invoker, read-only
 -- current_user can change under SECURITY DEFINER execution while
@@ -198,5 +175,6 @@ end;
 $$;
 
 -- ---------------------------------------------------------------- cleanup
--- Roll back everything, including the auth.users delete above.
+-- Roll back all seeded rows. (No auth row is deleted by this script;
+-- see section (c) above for why the live cascade is verified manually.)
 rollback;
