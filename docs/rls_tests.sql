@@ -17,6 +17,10 @@
 --   (d) letter body is hidden before unlock (direct SELECT on body denied,
 --       get_letters() returns NULL body + is_unlocked=false; day-0 letter
 --       returns its body).
+--   (e) forged user_id writes are denied by RLS;
+--   (f) TRUNCATE is denied (no privilege, RLS-independent);
+--   (g) rapid profile timezone flips are blocked (7-day cooldown);
+--   (h) backdated pauses are rejected, same-day pauses accepted.
 begin;
 
 -- ---------------------------------------------------------------- setup data
@@ -180,6 +184,87 @@ begin
       raise notice 'PASS: day-30 letter body hidden before unlock';
     end if;
   end loop;
+end;
+$$;
+
+-- --------------------------------- (e) forged user_id writes are denied
+do $$
+begin
+  begin
+    insert into public.check_ins (user_id, commitment_id, day, done)
+    values (
+      '61330a53-3661-4ca0-b920-6307228fb574',
+      'b0000000-0000-0000-0000-000000000021',
+      (now()::date),
+      true
+    );
+    raise exception 'FAIL: forged user_id insert succeeded';
+  exception when others then
+    if SQLERRM not like '%row-level security%' then
+      raise exception 'FAIL: unexpected forged-insert error: %', SQLERRM;
+    end if;
+    raise notice 'PASS: forged user_id insert denied by RLS';
+  end;
+end;
+$$;
+
+-- --------------------------------------- (f) TRUNCATE is denied
+do $$
+begin
+  begin
+    truncate public.check_ins;
+    raise exception 'FAIL: TRUNCATE succeeded';
+  exception when insufficient_privilege then
+    raise notice 'PASS: TRUNCATE denied (no privilege, RLS-independent)';
+  end;
+end;
+$$;
+
+-- ----------------- (g) rapid timezone flips blocked (needs hardening migration)
+do $$
+begin
+  update public.profiles set timezone = 'Pacific/Kiritimati'
+  where id = 'aed027ef-a2a4-436e-b427-353ecf282c8d';
+  raise notice 'PASS: first timezone change allowed';
+  begin
+    update public.profiles set timezone = 'Pacific/Midway'
+    where id = 'aed027ef-a2a4-436e-b427-353ecf282c8d';
+    raise exception 'FAIL: rapid timezone flip succeeded';
+  exception when others then
+    if SQLERRM not like '%recently%' then
+      raise exception 'FAIL: unexpected timezone error: %', SQLERRM;
+    end if;
+    raise notice 'PASS: rapid timezone change blocked (7-day cooldown)';
+  end;
+end;
+$$;
+
+-- ----------------- (h) pause start_day bounds (needs hardening migration)
+do $$
+begin
+  begin
+    insert into public.pauses (user_id, contract_id, type, start_day)
+    values (
+      'aed027ef-a2a4-436e-b427-353ecf282c8d',
+      'a0000000-0000-0000-0000-000000000001',
+      'sick',
+      (now()::date) - 30
+    );
+    raise exception 'FAIL: 30-day backdated pause succeeded';
+  exception when others then
+    if SQLERRM not like '%last 3 days%' then
+      raise exception 'FAIL: unexpected pause error: %', SQLERRM;
+    end if;
+    raise notice 'PASS: 30-day backdated pause rejected';
+  end;
+  insert into public.pauses (user_id, contract_id, type, start_day)
+  values (
+    'aed027ef-a2a4-436e-b427-353ecf282c8d',
+    'a0000000-0000-0000-0000-000000000001',
+    'sick',
+    (now()::date)
+  );
+  raise notice 'PASS: same-day pause accepted';
 end;
 $$;
 

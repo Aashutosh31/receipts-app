@@ -126,7 +126,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   `[server-local-today − 3 days, contract end_date]` (3 days preserves the
   legitimate sick-then-declare flow and matches the 48h excuse spirit) +
   SQL regression test. Decision recorded in `docs/DECISIONS.md`.
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed** (migration committed; owner applies via `db push`).
 
 ### F-07 — Unlimited profile timezone changes game the grace window (Medium, fix committed)
 
@@ -140,7 +140,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 - Fix: new migration adds `profiles.timezone_changed_at` + trigger allowing
   a change only if never changed or last change > 7 days ago. One gamed day
   per week max, each flip timestamped as evidence. +   SQL regression test.
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed** (migration committed; owner applies via `db push`).
 
 ### F-08 — Squad invite codes use a 16-symbol alphabet, no rate limit (Medium, fix committed)
 
@@ -170,7 +170,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   F-05). Full-disk encryption + keystore-backed secure storage migration
   recorded as future hardening (Info F-20), not required for v1: no PII
   beyond email, physical-access threat only.
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed** (migration committed; owner applies via `db push`).
 
 ### F-10 — Raw PostgREST error text reaches users (Low, accepted)
 
@@ -193,7 +193,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 
 - Files: `docs/PROGRESS.md`, `docs/RELEASE.md` (`/home/aashutosh31/...`).
 - Fix: rewritten as `$HOME/...`.
-- Status: Open (fix follows in this audit's fix commits).
+- Status: Open (docs fix lands with the hygiene commit).
 
 ### F-13 — Nudge `day` spoofable via direct insert (Low, fix committed)
 
@@ -202,7 +202,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   (`my_nudges_today` filters to today; feed never shows nudges).
 - Fix: trigger rejects `new.day != now()::date` (folded into the hardening
   migration).
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed** (migration committed; owner applies via `db push`).
 
 ### F-14 — Squad size TOCTOU race (Low, fix committed)
 
@@ -210,14 +210,14 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   concurrent joins could admit a 6th member.
 - Fix: `pg_advisory_xact_lock(hashtext(...))` at trigger start serializes
   per-squad inserts (folded into the hardening migration).
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed** (migration committed; owner applies via `db push`).
 
 ### F-15 — Edge Function pins floating `@supabase/supabase-js@2` (Low, fix committed)
 
 - File: `supabase/functions/delete-account/index.ts:21` (Deno std already
   pinned at 0.224.0).
 - Fix: pin exact `supabase-js` version.
-- Status: **Fixed** (see commit).
+- Status: Open (lands with the hygiene commit).
 
 ### Functions review (all SECURITY DEFINER verified)
 

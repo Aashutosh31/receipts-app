@@ -1,3 +1,18 @@
+## Security-hardening migration (audit F-06, F-07, F-08, F-13, F-14)
+
+1. **Timezone cooldown is 7 days**: the grace-window exploit needs two flips
+   within ~26h, so 7 days rate-limits gaming to one gamed day per week with
+   a timestamped trail. The app never writes `timezone` itself, so no UX
+   impact; legitimate movers can still change weekly.
+2. **Pause backdating capped at 3 days**: preserves the genuine
+   sick-then-declare flow and matches the 48h excuse spirit; week-scale
+   erasures are rejected. Upper bound is the contract end date.
+3. **Invite codes use full A-Z0-9 from `gen_random_bytes`** (CSPRNG source;
+   negligible mod-36 bias accepted and noted). Same 6-char shape and CHECK,
+   so existing codes and the app input keep working.
+4. **Size race closed with a per-squad advisory xact lock** (auto-released);
+   nudge `day` pinned to server date in the membership trigger.
+
 ## Auth-cascade delete bypass (production delete-account fix)
 
 1. **Only `supabase_auth_admin` passes the delete blockers**: new migration
