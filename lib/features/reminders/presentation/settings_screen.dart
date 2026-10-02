@@ -10,6 +10,7 @@ import '../../auth/data/auth_repository.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../contract/domain/contract_models.dart';
 import '../../contract/presentation/contract_providers.dart';
+import '../../offline/presentation/offline_providers.dart';
 import '../data/settings_store.dart';
 import '../domain/message_engine.dart';
 import 'reminder_providers.dart';
@@ -214,6 +215,10 @@ class _SettingsBody extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         const SignOutRow(),
+        const SizedBox(height: 24),
+        Text('Danger zone', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const DeleteAccountRow(),
       ],
     );
   }
@@ -249,6 +254,108 @@ class SignOutRow extends ConsumerWidget {
           }
         }
       },
+    );
+  }
+}
+
+/// Confirms typed DELETE text. Pure for testability.
+bool isDeleteConfirmed(String value) => value.trim() == 'DELETE';
+
+/// Danger-zone row: deletes the account server-side (Edge Function, service
+/// role stays on the server), wipes local cache + settings, then signs out.
+class DeleteAccountRow extends ConsumerStatefulWidget {
+  const DeleteAccountRow({super.key});
+
+  @override
+  ConsumerState<DeleteAccountRow> createState() => _DeleteAccountRowState();
+}
+
+class _DeleteAccountRowState extends ConsumerState<DeleteAccountRow> {
+  final TextEditingController _confirm = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    if (!isDeleteConfirmed(_confirm.text)) {
+      setState(() => _error = 'Type DELETE to confirm.');
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authRepositoryProvider).deleteAccount();
+      final String? userId = ref
+          .read(currentUserIdProvider)
+          .maybeWhen(data: (String? id) => id, orElse: () => null);
+      if (userId != null) {
+        await ref.read(localCacheProvider).clearUser(userId);
+        final ReminderSettingsStore store = await ref.read(
+          settingsStoreProvider.future,
+        );
+        await store.delete();
+      }
+      await ref.read(authRepositoryProvider).signOut();
+      // The auth guard routes to sign-in from here.
+    } on AuthFailure catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.message;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Text(
+              'Delete my account and data. This erases your contract, '
+              'ledger, excuses, pauses, letters, and squad memberships '
+              'forever. Squads you created disappear for their members too. '
+              'There is no undo.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _confirm,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Type DELETE to confirm',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            AppButton(
+              label: 'Delete everything',
+              isLoading: _isLoading,
+              onPressed: _delete,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -63,4 +63,15 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     throw UnimplementedError();
   }
+
+  /// Hook for delete-flow tests; defaults to success.
+  Future<void> Function()? onDeleteAccount;
+
+  @override
+  Future<void> deleteAccount() async {
+    final Future<void> Function()? hook = onDeleteAccount;
+    if (hook != null) {
+      await hook();
+    }
+  }
 }

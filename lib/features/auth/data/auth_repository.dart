@@ -23,6 +23,11 @@ abstract class AuthRepository {
   Future<bool> signUp({required String email, required String password});
   Future<void> signIn({required String email, required String password});
   Future<void> signOut();
+
+  /// Deletes the caller's account server-side via the delete-account Edge
+  /// Function (service role key stays on the server). The caller's session
+  /// is dead afterwards; callers must sign out and wipe local data next.
+  Future<void> deleteAccount();
 }
 
 class SupabaseAuthRepository implements AuthRepository {
@@ -76,6 +81,31 @@ class SupabaseAuthRepository implements AuthRepository {
       await _client.auth.signOut();
     } catch (_) {
       throw const AuthFailure('Sign out failed. Try again.');
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      final FunctionResponse response = await _client.functions.invoke(
+        'delete-account',
+      );
+      if (response.status != 200) {
+        throw AuthFailure(
+          'Delete failed (server said ${response.status}). Try again.',
+        );
+      }
+    } on FunctionException catch (e) {
+      if (e.status == 401) {
+        throw const AuthFailure('You are signed out. Sign in again.');
+      }
+      throw const AuthFailure(
+        'Delete failed. Check your connection and try again.',
+      );
+    } catch (_) {
+      throw const AuthFailure(
+        'Delete failed. Check your connection and try again.',
+      );
     }
   }
 

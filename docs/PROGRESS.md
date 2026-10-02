@@ -170,9 +170,35 @@
 - Tests: 129 green (invite validation, feed parsing incl. null rows,
   faked feed/nudge UI + provider tests).
 
-## Next (Stage 5C: release readiness)
+## Done (Stage 5C: release readiness)
 
-- Drift cache (Stage 5 only), squads (later). Notification-tap deep linking.
+- Icon + splash via official tooling (flutter_launcher_icons 0.14.4,
+  flutter_native_splash 2.4.8): dark receipt-slip mark from
+  `assets/icon/app_icon.png`, `#0A0A0B` splash incl. Android 12+ section.
+- Release config: `applicationId com.receipts.receipts`, version from
+  pubspec; `android/key.properties` signing with committed `.example`
+  template (secrets gitignored, debug fallback for local runs);
+  `flutter build appbundle --release` green (55MB `.aab`).
+- `docs/RELEASE.md`: keystore steps, bundle build, internal-testing rollout,
+  and the closed-testing rule for new personal accounts (≥12 testers,
+  14 continuous days, official Play help article 14151465).
+- Privacy + deletion: `docs/PRIVACY.md` (plain-language storage list, squad
+  visibility limits, cascade consequences); `delete-account` Edge Function
+  (service key server-side secret only); in-app Settings danger zone (type
+  DELETE → server delete → local cache/settings wipe → sign-out).
+- Final audit: no service_role or secrets in app code/git, no JWT-like
+  strings, RLS on all 11 tables (script-verified), squad RPCs
+  authenticated-only. See `docs/FINAL_CHECKLIST.md` (incl. owner manual
+  steps: push squad migration, deploy function, host privacy URL, Play
+  rollout).
+- Tests: 133 green. Quality gates green: pub get, format, analyze (zero),
+  test, debug APK + release appbundle.
+
+## Next
+
+- Project complete through Stage 5. Remaining owner-side work is listed in
+  `docs/FINAL_CHECKLIST.md` (live migration push, function deploy, Play
+  rollout, real-phone verification).
 
 ## How to run
 

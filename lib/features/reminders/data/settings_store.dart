@@ -129,6 +129,11 @@ class ReminderSettingsStore {
     return _prefs.setString(_key, encoded);
   }
 
+  /// Removes this user's settings (used after account deletion).
+  Future<void> delete() {
+    return _prefs.remove(_key);
+  }
+
   static Object _decodeValue(String raw) {
     final int? number = int.tryParse(raw);
     if (number != null) {

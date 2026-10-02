@@ -278,4 +278,26 @@ class LocalCache {
     final List<OutboxCheckin> rows = await pendingOutbox(userId);
     return rows.length;
   }
+
+  /// Deletes every cached and queued row owned by [userId]. Used after
+  /// account deletion so no local trace remains on the device.
+  Future<void> clearUser(String userId) async {
+    await _db.transaction(() async {
+      await (_db.delete(
+        _db.cachedContracts,
+      )..where((t) => t.userId.equals(userId))).go();
+      await (_db.delete(
+        _db.cachedCommitments,
+      )..where((t) => t.userId.equals(userId))).go();
+      await (_db.delete(
+        _db.cachedLedgerEntries,
+      )..where((t) => t.userId.equals(userId))).go();
+      await (_db.delete(
+        _db.cachedStreaks,
+      )..where((t) => t.userId.equals(userId))).go();
+      await (_db.delete(
+        _db.outboxCheckins,
+      )..where((t) => t.userId.equals(userId))).go();
+    });
+  }
 }

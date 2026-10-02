@@ -1,0 +1,17 @@
+# Release signing config (TEMPLATE ONLY - never put real secrets here).
+#
+# 1. Copy this file to `key.properties` (gitignored, never committed).
+# 2. Generate an upload keystore once (keep it + its passwords backed up
+#    offline; losing it locks you out of app updates):
+#      keytool -genkey -v -keystore ~/receipts-upload-keystore.jks \
+#        -keyalg RSA -keysize 2048 -validity 10000 \
+#        -alias receipts-upload
+# 3. Fill in the values below. storeFile may be absolute or relative to the
+#    android/ directory.
+#
+# See: https://docs.flutter.dev/deployment/android#signing-the-app
+
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=receipts-upload
+storeFile=../receipts-upload-keystore.jks

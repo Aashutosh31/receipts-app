@@ -4,6 +4,20 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import java.io.FileInputStream
+import java.util.Properties
+
+// Release signing follows the official Flutter deployment guide:
+// a local key.properties (gitignored, see key.properties.example) feeds a
+// `release` signing config; without it, release builds fall back to debug
+// keys so local `--release` runs keep working.
+// See: https://docs.flutter.dev/deployment/android#signing-the-app
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.receipts.receipts"
     compileSdk = flutter.compileSdkVersion
@@ -39,9 +53,25 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                // TODO: create android/key.properties (see key.properties.example)
+                // and sign real releases with the upload key. Debug keys here
+                // exist only so `flutter run --release` works without secrets.
+                signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 }
