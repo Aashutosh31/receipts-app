@@ -6,7 +6,11 @@
 --   2. Create six test users (Authentication -> Users -> Add user, or sign up
 --      from the app). Copy their UUIDs. (You can reuse the Stage 1 A/B/C
 --      users and add D/E/F.)
---   3. Replace USER_A_UUID ... USER_F_UUID below with those UUIDs.
+-- 3. Replace USER_A_UUID ... USER_F_UUID below with those UUIDs.
+--   Test roles (do not change): D = squad owner + member + test-contract
+--   owner (D is contract-free; A already has a real active contract and the
+--   one-active-contract partial index would reject a second one for A);
+--   E = second member; C = non-member; A, B, F = fillers to reach 5 members.
 --   4. Run this whole script. Every check prints NOTICE "PASS ...".
 --      Any unexpected result raises EXCEPTION "FAIL ..." and aborts.
 --   5. The whole script runs in one transaction and rolls back at the end,
@@ -21,12 +25,6 @@
 --   (c) 6th member join fails (max 5 enforced);
 --   (d) second nudge to anyone the same day fails (1-per-day enforced).
 
-\set user_a USER_A_UUID
-\set user_b USER_B_UUID
-\set user_c USER_C_UUID
-\set user_d USER_D_UUID
-\set user_e USER_E_UUID
-\set user_f USER_F_UUID
 
 begin;
 
@@ -37,28 +35,32 @@ values (
   'c0000000-0000-0000-0000-000000000001',
   'Test Squad',
   'TST001',
-  :'user_a'
+  '648d4ee8-2a07-4bab-b6c0-3b9732a87410'
 )
 on conflict (id) do nothing;
 
 insert into public.squad_members (squad_id, user_id)
 values
-  ('c0000000-0000-0000-0000-000000000001', :'user_a'),
-  ('c0000000-0000-0000-0000-000000000001', :'user_b')
+  ('c0000000-0000-0000-0000-000000000001', '648d4ee8-2a07-4bab-b6c0-3b9732a87410'),
+  ('c0000000-0000-0000-0000-000000000001', '63328b58-dad5-4ae6-8e42-e73058bd5ebb')
 on conflict do nothing;
 
 -- Display names so the feed has something to return.
-update public.profiles set display_name = 'Test Asha'
-where id = :'user_a';
-update public.profiles set display_name = 'Test Bala'
-where id = :'user_b';
+update public.profiles set display_name = 'Test Dev'
+where id = '648d4ee8-2a07-4bab-b6c0-3b9732a87410';
+update public.profiles set display_name = 'Test Em'
+where id = '63328b58-dad5-4ae6-8e42-e73058bd5ebb';
 
--- User A gets a contract + commitment + today check-in so the feed computes
--- kept status, streak, and a zero missed count.
+-- User D gets a contract + commitment + today check-in so the feed computes
+-- kept status, streak, and a zero missed count. D is used because it has no
+-- real contract: the contracts_one_active_per_user partial unique index
+-- would reject a second active contract for a user that already has one
+-- (this is what broke the first version of this script for User A), and
+-- ON CONFLICT (id) cannot catch that separate constraint.
 insert into public.contracts (id, user_id, start_date, mode, status)
 values (
   'c0000000-0000-0000-0000-000000000011',
-  :'user_a',
+  '648d4ee8-2a07-4bab-b6c0-3b9732a87410',
   (now()::date) - 5,
   'hard',
   'active'
@@ -69,15 +71,15 @@ insert into public.commitments (id, contract_id, user_id, title, sort_order)
 values (
   'c0000000-0000-0000-0000-000000000021',
   'c0000000-0000-0000-0000-000000000011',
-  :'user_a',
-  'Test commitment A',
+  '648d4ee8-2a07-4bab-b6c0-3b9732a87410',
+  'Test commitment D',
   0
 )
 on conflict (id) do nothing;
 
 insert into public.check_ins (user_id, commitment_id, day, done)
 values (
-  :'user_a',
+  '648d4ee8-2a07-4bab-b6c0-3b9732a87410',
   'c0000000-0000-0000-0000-000000000021',
   (now()::date),
   true
@@ -88,7 +90,7 @@ on conflict (commitment_id, day) do nothing;
 set role authenticated;
 select set_config(
   'request.jwt.claims',
-  json_build_object('sub', :'user_c', 'role', 'authenticated')::text,
+  json_build_object('sub', 'a1286af9-13ba-4112-aa6b-d52d5a964c0e', 'role', 'authenticated')::text,
   true
 );
 
@@ -131,7 +133,7 @@ $$;
 -- --------------------------------- (b) member feed works, columns are safe
 select set_config(
   'request.jwt.claims',
-  json_build_object('sub', :'user_b', 'role', 'authenticated')::text,
+  json_build_object('sub', '63328b58-dad5-4ae6-8e42-e73058bd5ebb', 'role', 'authenticated')::text,
   true
 );
 
@@ -145,7 +147,7 @@ declare
   ];
   v_key text;
   v_rows integer := 0;
-  v_asha_today text;
+  v_dev_today text;
 begin
   for r in
     select * from public.squad_feed('c0000000-0000-0000-0000-000000000001')
@@ -158,16 +160,16 @@ begin
         raise exception 'FAIL: feed leaks column %', v_key;
       end if;
     end loop;
-    if r.display_name = 'Test Asha' then
-      v_asha_today := r.today_status;
+    if r.display_name = 'Test Dev' then
+      v_dev_today := r.today_status;
     end if;
   end loop;
   if v_rows != 2 then
     raise exception 'FAIL: feed returned % rows, expected 2', v_rows;
   end if;
   raise notice 'PASS: feed columns are exactly the 6 allowed ones';
-  if v_asha_today is distinct from 'kept' then
-    raise exception 'FAIL: expected kept for today, got %', v_asha_today;
+  if v_dev_today is distinct from 'kept' then
+    raise exception 'FAIL: expected kept for today, got %', v_dev_today;
   end if;
   raise notice 'PASS: feed shows kept for completed today';
 end;
@@ -180,14 +182,14 @@ declare
 begin
   perform public.send_nudge(
     'c0000000-0000-0000-0000-000000000001',
-    :'user_a'
+    '648d4ee8-2a07-4bab-b6c0-3b9732a87410'
   );
   raise notice 'PASS: first nudge of the day succeeds';
 
   begin
     perform public.send_nudge(
       'c0000000-0000-0000-0000-000000000001',
-      :'user_a'
+      '648d4ee8-2a07-4bab-b6c0-3b9732a87410'
     );
     raise exception 'FAIL: second nudge succeeded';
   exception when others then
@@ -199,7 +201,7 @@ begin
 
   select array_agg(t.to_user_id) into v_nudged
   from public.my_nudges_today('c0000000-0000-0000-0000-000000000001') as t;
-  if not (:'user_a'::uuid = any (v_nudged)) then
+  if not ('648d4ee8-2a07-4bab-b6c0-3b9732a87410'::uuid = any (v_nudged)) then
     raise exception 'FAIL: my_nudges_today missing the recipient';
   end if;
   raise notice 'PASS: my_nudges_today lists the recipient';
@@ -207,20 +209,22 @@ end;
 $$;
 
 -- ------------------------------------------------------ (c) max 5 members
--- Fill to 5 with D, E, F (as owner, bypassing RLS but not triggers).
+-- Fill to 5 with A, B, F (as owner, bypassing RLS but not triggers).
+-- No contracts are created for fillers: several already have real ones and
+-- the one-active-contract index would reject a second.
 reset role;
 
 insert into public.squad_members (squad_id, user_id)
 values
-  ('c0000000-0000-0000-0000-000000000001', :'user_d'),
-  ('c0000000-0000-0000-0000-000000000001', :'user_e'),
-  ('c0000000-0000-0000-0000-000000000001', :'user_f')
+  ('c0000000-0000-0000-0000-000000000001', 'aed027ef-a2a4-436e-b427-353ecf282c8d'),
+  ('c0000000-0000-0000-0000-000000000001', '61330a53-3661-4ca0-b920-6307228fb574'),
+  ('c0000000-0000-0000-0000-000000000001', '9c9e2226-e0d6-45d5-becf-1f57dc528af2')
 on conflict do nothing;
 
 set role authenticated;
 select set_config(
   'request.jwt.claims',
-  json_build_object('sub', :'user_c', 'role', 'authenticated')::text,
+  json_build_object('sub', 'a1286af9-13ba-4112-aa6b-d52d5a964c0e', 'role', 'authenticated')::text,
   true
 );
 
