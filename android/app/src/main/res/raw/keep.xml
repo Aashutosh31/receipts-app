@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keep the launcher icon: it doubles as the notification icon and R8
+     resource shrinking could otherwise discard it in release builds, which
+     silently breaks notifications.
+     See: https://pub.dev/packages/flutter_local_notifications#release-build-configuration -->
+<resources
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher" />

@@ -4,11 +4,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/supabase/supabase_initializer.dart';
 import 'core/theme/app_theme.dart';
+import 'features/reminders/data/notification_service.dart';
+import 'features/reminders/presentation/reminder_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseInitializer.initialize();
-  runApp(const ProviderScope(child: ReceiptsApp()));
+  // Stage 3 reminders: timezone database + device location + plugin.
+  final NotificationService notificationService = LocalNotificationService();
+  await notificationService.init();
+  runApp(
+    ProviderScope(
+      overrides: [
+        notificationServiceProvider.overrideWithValue(notificationService),
+      ],
+      child: const ReceiptsApp(),
+    ),
+  );
 }
 
 class ReceiptsApp extends ConsumerWidget {

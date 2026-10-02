@@ -1,3 +1,30 @@
+## Stage 3 (reminders)
+
+1. **Exact alarms via SCHEDULE_EXACT_ALARM, never USE_EXACT_ALARM**: the
+   latter is reserved for alarm-clock/calendar apps and risks Play Store
+   rejection. Denied/unavailable exact alarms degrade honestly to
+   `inexactAllowWhileIdle` and the UI says which mode is active.
+   See: https://developer.android.com/about/versions/14/changes/schedule-exact-alarms
+2. **iOS honesty**: no true alarms on iOS, only UserNotifications; at most
+   64 pending requests system-wide, so scheduling caps at 60 and packs
+   day-major order. Documented on the permission screen.
+   See: https://pub.dev/packages/flutter_local_notifications#ios-pending-notifications-limit
+3. **Rolling 7-day window, refreshed on app open**: covers app updates,
+   contract edits, and timezone changes (device reboot restore is handled
+   by the plugin's own boot receiver; the window extension happens here).
+4. **Deterministic notification IDs** (FNV-1a over day|commitment|kind):
+   Dart's `String.hashCode` is unstable across runs, which would orphan
+   follow-ups after a restart and break cancel-on-Done.
+5. **Quiet hours shift, never drop**: reminders inside the window move to
+   its end (rolling past midnight when needed). Default 22:00-07:00.
+6. **Tone is a cap, pauses force calm**: escalation runs on trailing
+   consecutive misses; the user's tone setting only caps it, and pause days
+   always use the softened pool.
+7. **Notification taps just open the app**: deep-link routing of taps is
+   future work; the callback is a documented no-op for now.
+8. **Settings live in SharedPreferences**, not Supabase: they are
+   device-local prefs (Stage 5 drift is for cached backend data).
+
 ## Stage 2 (2026-10-02)
 
 1. **Auth guard shape**: go_router `redirect` handles only the synchronous

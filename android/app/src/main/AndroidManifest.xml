@@ -1,8 +1,35 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Stage 3 reminders. POST_NOTIFICATIONS/VIBRATE come from the
+         flutter_local_notifications plugin manifest itself (v16+ declares
+         only the bare minimum).
+         See: https://pub.dev/packages/flutter_local_notifications#androidmanifestxml-setup -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Exact alarms need user grant (denied by default on Android 14+ for
+         fresh installs targeting API 33+). We check canScheduleExactAlarms()
+         at runtime and fall back to inexact scheduling when denied.
+         See: https://developer.android.com/about/versions/14/changes/schedule-exact-alarms
+         USE_EXACT_ALARM deliberately NOT declared: it is reserved for
+         alarm-clock/calendar apps and risks Play Store rejection. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <application
         android:label="receipts"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Receivers required by flutter_local_notifications for scheduled
+             notifications + reboot restore. -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true"

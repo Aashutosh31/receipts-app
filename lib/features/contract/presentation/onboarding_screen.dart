@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../data/contract_repository.dart';
 import '../domain/contract_draft.dart';
+import '../../reminders/presentation/reminder_providers.dart';
 import '../domain/contract_models.dart';
 import 'contract_providers.dart';
 
@@ -79,6 +80,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             commitments: _draft.commitments,
           );
       ref.invalidate(activeContractProvider);
+      ref.invalidate(reminderRefreshProvider);
       if (mounted) {
         context.go('/today');
       }

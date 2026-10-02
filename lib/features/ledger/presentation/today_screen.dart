@@ -14,6 +14,7 @@ import '../../contract/presentation/contract_providers.dart';
 import '../../contract/presentation/pause_sheet.dart';
 import '../../excuse/domain/excuse_models.dart';
 import '../../excuse/presentation/excuse_sheet.dart';
+import '../../reminders/presentation/reminder_providers.dart';
 import '../data/ledger_repository.dart';
 import '../domain/ledger_models.dart';
 import 'ledger_providers.dart';
@@ -63,6 +64,9 @@ class _TodayBody extends ConsumerStatefulWidget {
 class _TodayBodyState extends ConsumerState<_TodayBody> {
   /// Signature of the pending set already presented, to avoid re-showing.
   String _shownPending = '';
+
+  /// Permission intro is offered once per signed contract session.
+  bool _permissionPrompted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -120,11 +124,22 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
         : null;
 
     _maybeShowExcuses();
+    _maybeShowPermissionGate();
+    // Keep the 7-day reminder window fresh while Today is visible.
+    // Best-effort: this UI never depends on the result.
+    ref.watch(reminderRefreshProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Today'),
-        actions: const <Widget>[SignOutButton()],
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+          const SignOutButton(),
+        ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -166,13 +181,19 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
                   ),
               const SizedBox(height: 16),
               OutlinedButton(
-                onPressed: () => showPauseSheet(
-                  context: context,
-                  ref: ref,
-                  contract: widget.contract,
-                  openPause: openPause,
-                  serverToday: today,
-                ),
+                onPressed: () async {
+                  await showPauseSheet(
+                    context: context,
+                    ref: ref,
+                    contract: widget.contract,
+                    openPause: openPause,
+                    serverToday: today,
+                  );
+                  if (!mounted) {
+                    return;
+                  }
+                  ref.invalidate(reminderRefreshProvider);
+                },
                 child: Text(
                   openPause == null
                       ? 'Declare sick / injury pause'
@@ -217,6 +238,23 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
     });
   }
 
+  void _maybeShowPermissionGate() {
+    // Watch so this rebuilds once settings finish loading.
+    final settings = ref
+        .watch(reminderSettingsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    if (settings == null || settings.permissionAsked || _permissionPrompted) {
+      return;
+    }
+    _permissionPrompted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      context.push('/notifications/intro');
+    });
+  }
+
   Future<void> _submitDone(LedgerEntry entry) async {
     final bool confirmed = await showFinalConfirm(
       context: context,
@@ -233,8 +271,16 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       await ref
           .read(ledgerRepositoryProvider)
           .submitCheckIn(commitmentId: entry.commitmentId, day: entry.day);
+      // Drop today's follow-up immediately; the refresh below rebuilds the
+      // whole window anyway. Best-effort: a stale follow-up is harmless.
+      await cancelFollowUps(
+        service: ref.read(notificationServiceProvider),
+        day: entry.day,
+        commitmentId: entry.commitmentId,
+      ).catchError((Object _) {});
       ref.invalidate(ledgerProvider(widget.contract.id));
       ref.invalidate(streakProvider(widget.contract.id));
+      ref.invalidate(reminderRefreshProvider);
     } on LedgerFailure catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

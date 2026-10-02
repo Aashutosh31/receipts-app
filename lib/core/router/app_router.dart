@@ -12,6 +12,8 @@ import '../../features/contract/presentation/onboarding_screen.dart';
 import '../../features/ledger/presentation/app_shell.dart';
 import '../../features/ledger/presentation/ledger_screen.dart';
 import '../../features/ledger/presentation/today_screen.dart';
+import '../../features/reminders/presentation/permission_screen.dart';
+import '../../features/reminders/presentation/settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((Ref ref) {
   final auth = ref.watch(authRepositoryProvider);
@@ -67,6 +69,18 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
         name: 'ledger',
         builder: (BuildContext context, GoRouterState state) =>
             const LedgerScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications/intro',
+        name: 'notifications-intro',
+        builder: (BuildContext context, GoRouterState state) =>
+            const PermissionScreen(),
       ),
     ],
     errorBuilder: (BuildContext context, GoRouterState state) {

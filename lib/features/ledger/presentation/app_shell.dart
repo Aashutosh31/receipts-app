@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/app_widgets.dart';
 import '../../contract/domain/contract_models.dart';
 import '../../contract/presentation/contract_providers.dart';
+import '../../reminders/presentation/reminder_providers.dart';
 
 class GateScreen extends ConsumerWidget {
   const GateScreen({super.key});
@@ -15,6 +16,9 @@ class GateScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<Contract?> active = ref.watch(activeContractProvider);
+    // Refresh the 7-day reminder window on every app open. Best-effort:
+    // the gate UI below never depends on it.
+    ref.watch(reminderRefreshProvider);
     return active.when(
       data: (Contract? contract) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

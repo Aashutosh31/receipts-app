@@ -69,11 +69,39 @@
   read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
   tested or built.
 
-## Next (Stage 3+, do NOT build yet)
+## Done (Stage 3: local reminders)
+
+- Packages (pub.dev latest stable): flutter_local_notifications 22.3.1,
+  timezone 0.11.1, flutter_timezone 5.1.0, shared_preferences (settings).
+- Android setup per plugin README: desugaring + Java 17, RECEIVE_BOOT_COMPLETED
+  and SCHEDULE_EXACT_ALARM permissions, scheduled/boot receivers, release
+  keep.xml for the notification icon.
+- `NotificationService` behind an interface, started in `main()` with the
+  timezone database and device location (flutter_timezone, UTC fallback).
+- Permission flow: explanation-first screen on first Today visit;
+  Android 13+ notification prompt, exact-alarm request with honest
+  exact-vs-approximate status; iOS limits documented in-app (no true alarms,
+  64 pending cap). Re-reviewable from Settings.
+- Scheduling: per-commitment target-time reminder + 30-minute follow-up
+  (skipped/cancelled when done), one 21:00 last call per day, rolling 7-day
+  window capped at 60, refreshed on every app open (covers updates, edits,
+  timezone changes; reboot restore via plugin receiver). Quiet hours shift
+  instead of dropping (default 22:00-07:00).
+- Message engine: 78 templates in calm/firm/blunt tiers using title, target,
+  now, streak, day, last excuse, done/total; escalation on consecutive misses
+  capped by the tone setting; pause days always softened. Banned-word test
+  guards against insults and weight/body references.
+- Settings screen: live status (on/off, exact/approximate, scheduled count),
+  quiet-hours pickers, tone cap, per-commitment toggles, sign out.
+- Tests: 82 green (message engine, scheduling math incl. midnight/DST edges,
+  mocked-repo widget tests).
+- Quality gates green: pub get, format, analyze (zero), test, debug APK.
+
+## Next (Stage 4+, do NOT build yet)
 
 - Letters UI (write day-1 letter, unlock views on days 30/60/90 via
-  `get_letters`), excuse analytics (top excuse with counts), local
-  notifications (Stage 4+), drift cache (Stage 5 only), squads (later).
+  `get_letters`), excuse analytics (top excuse with counts), drift cache
+  (Stage 5 only), squads (later). Notification-tap deep linking.
 
 ## How to run
 

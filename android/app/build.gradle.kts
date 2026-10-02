@@ -12,11 +12,19 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications v10+ for scheduled
+        // notifications with backwards compatibility.
+        // See: https://pub.dev/packages/flutter_local_notifications#gradle-setup
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.receipts.receipts"
+        // Required by flutter_local_notifications v10+ for scheduled
+        // notifications (desugaring). See:
+        // https://pub.dev/packages/flutter_local_notifications#gradle-setup
+        multiDexEnabled = true
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -42,6 +50,12 @@ kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
+}
+
+dependencies {
+    // Required by flutter_local_notifications v10+ (desugaring).
+    // See: https://pub.dev/packages/flutter_local_notifications#gradle-setup
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
