@@ -19,7 +19,9 @@
 --   (b) non-cascade roles (even the owner) still hit the 25001 trigger on
 --       direct contract/check-in deletes;
 --   (c) deleting auth.users as supabase_auth_admin cascades through
---       contracts, commitments, and check-ins with no 25001.
+--       contracts, commitments, and check-ins with no 25001;
+--   (d) the bypass helper keys on session_user (robust to SECURITY DEFINER
+--       hops, which rewrite current_user) and is not definer itself.
 
 \set user_f USER_F_UUID
 
@@ -153,6 +155,36 @@ end;
 $$;
 
 reset role;
+
+-- -------- (d) bypass helper keys on session_user, stays invoker, read-only
+-- current_user can change under SECURITY DEFINER execution while
+-- session_user keeps identifying the original session login, so the bypass
+-- must key on session_user. This checks the live definition without
+-- deleting anything.
+do $$
+declare
+  v_src text;
+  v_definer boolean;
+begin
+  select prosrc, prosecdef into v_src, v_definer
+  from pg_proc
+  where pronamespace = 'public'::regnamespace
+    and proname = 'is_auth_account_cascade';
+  if v_src is null then
+    raise exception 'FAIL: is_auth_account_cascade() missing';
+  end if;
+  if v_src not like '%session_user%' then
+    raise exception 'FAIL: helper does not check session_user';
+  end if;
+  if v_src like '%current_user%' then
+    raise exception 'FAIL: helper still references current_user';
+  end if;
+  if v_definer then
+    raise exception 'FAIL: helper must stay SECURITY INVOKER';
+  end if;
+  raise notice 'PASS: bypass keys on session_user, invoker, present';
+end;
+$$;
 
 -- ---------------------------------------------------------------- cleanup
 -- Roll back everything, including the auth.users delete above.
