@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- INTERNET is required in release builds too: the debug/profile
+         manifests add it only for dev flavors, and manifest merger gives
+         release builds just this file. Without it the app cannot reach
+         Supabase at all. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Stage 3 reminders. POST_NOTIFICATIONS/VIBRATE come from the
          flutter_local_notifications plugin manifest itself (v16+ declares
          only the bare minimum).
@@ -14,7 +19,9 @@
     <application
         android:label="receipts"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
         <!-- Receivers required by flutter_local_notifications for scheduled
              notifications + reboot restore. -->
         <receiver

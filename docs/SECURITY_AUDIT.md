@@ -111,7 +111,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   step: https://docs.flutter.dev/deployment/android.)
 - Fix: declare INTERNET in the main manifest (same commit also sets
   `allowBackup=false`, `usesCleartextTraffic=false` — see F-07/F-08).
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed**.
 
 ### F-06 — Retroactive pause backdating rewrites history (High, fix committed)
 
@@ -139,7 +139,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   no writes in `lib/`), so this needs raw API abuse — deliberate only.
 - Fix: new migration adds `profiles.timezone_changed_at` + trigger allowing
   a change only if never changed or last change > 7 days ago. One gamed day
-  per week max, each flip timestamped as evidence. + SQL regression test.
+  per week max, each flip timestamped as evidence. +   SQL regression test.
 - Status: Open (fix follows in this audit's fix commits).
 
 ### F-08 — Squad invite codes use a 16-symbol alphabet, no rate limit (Medium, fix committed)
@@ -187,7 +187,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
   `android:usesCleartextTraffic="false"`; all traffic is HTTPS to the
   Supabase URL (verified: no `http://` endpoints, no analytics/trackers in
   deps).
-- Status: Open (fix follows in this audit's fix commits).
+- Status: **Fixed**.
 
 ### F-12 — Local paths in docs disclose username (Low, fix committed)
 
