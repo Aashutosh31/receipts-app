@@ -26,7 +26,7 @@ flutter pub get
 dart format .   # must be clean
 flutter analyze # zero issues
 flutter test    # all green
-JAVA_HOME=/home/aashutosh31/development/jdk17 \
+JAVA_HOME=$HOME/development/jdk17 \
   flutter build appbundle --release
 ```
 

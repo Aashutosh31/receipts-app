@@ -1,0 +1,38 @@
+# CI: analyze, test, secret scan on every push and PR.
+# Action versions are pinned to full commit SHAs verified in the official
+# repos (see docs/SECURITY_AUDIT.md). Minimal permissions: contents: read.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout v6.0.1
+      - uses: actions/checkout@8e8c483db84b4fee98b60c0593521ed34d9990e8
+        with:
+          fetch-depth: 0
+      # actions/setup-java v5 (Temurin 17: Gradle needs JDK 17, not newer)
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      # subosito/flutter-action v2.23.0
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+      - run: flutter pub get
+      - run: dart format --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
+      # gitleaks/gitleaks-action v3.0.0 (secret scan of full history)
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e

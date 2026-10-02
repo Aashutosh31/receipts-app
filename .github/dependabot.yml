@@ -1,0 +1,14 @@
+# Dependabot: weekly checks for Dart/Flutter (pub) and Gradle updates.
+# Security updates land as PRs for review; see docs/SECURITY_AUDIT.md.
+version: 2
+updates:
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: gradle
+    directory: /android
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

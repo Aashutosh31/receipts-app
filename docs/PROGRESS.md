@@ -230,7 +230,7 @@ flutter run --dart-define-from-file=env.json
    flutter run --dart-define-from-file=env.json -d <emulator_id>
    ```
 4. If the Gradle build fails under Java 27, prefix the run command with
-   `JAVA_HOME=/home/aashutosh31/development/jdk17` (see Known issues).
+   `JAVA_HOME=$HOME/development/jdk17` (see Known issues).
 
 ## Known issues
 
@@ -241,6 +241,6 @@ flutter run --dart-define-from-file=env.json
 - Android builds fail under the default Java 27 (`JAVA_HOME` from mise):
   Gradle `JdkImageTransform` on `android-36/core-for-system-modules.jar`
   errors out (same family as flutter/flutter#156304). Workaround used here:
-  `JAVA_HOME=/home/aashutosh31/development/jdk17 flutter build apk --debug`
+  `JAVA_HOME=$HOME/development/jdk17 flutter build apk --debug`
   (Temurin 17.0.20, already on this machine). No repo change was needed;
   do not commit any local JDK path.

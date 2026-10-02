@@ -85,7 +85,7 @@ owner-side dashboard/build steps are still outstanding.
 
 - `env.example.json`: placeholders only.
 - README/docs grep for emails, keys, JWTs, project refs: clean, except
-  the local JDK path `/home/aashutosh31/...` in `docs/PROGRESS.md` and
+  the local JDK path (a `$HOME/...` developer path) in `docs/PROGRESS.md` and
   `docs/RELEASE.md` (username disclosure — fixed under F-12).
 - **Status**: verified (path fix below).
 
@@ -191,9 +191,9 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 
 ### F-12 — Local paths in docs disclose username (Low, fix committed)
 
-- Files: `docs/PROGRESS.md`, `docs/RELEASE.md` (`/home/aashutosh31/...`).
+- Files: `docs/PROGRESS.md`, `docs/RELEASE.md` (a `$HOME/...` developer path).
 - Fix: rewritten as `$HOME/...`.
-- Status: Open (docs fix lands with the hygiene commit).
+- Status: **Fixed** (see commit).
 
 ### F-13 — Nudge `day` spoofable via direct insert (Low, fix committed)
 
@@ -217,7 +217,7 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 - File: `supabase/functions/delete-account/index.ts:21` (Deno std already
   pinned at 0.224.0).
 - Fix: pin exact `supabase-js` version.
-- Status: Open (lands with the hygiene commit).
+- Status: **Fixed** (see commit).
 
 ### Functions review (all SECURITY DEFINER verified)
 
