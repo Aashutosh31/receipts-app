@@ -93,8 +93,8 @@
   guards against insults and weight/body references.
 - Settings screen: live status (on/off, exact/approximate, scheduled count),
   quiet-hours pickers, tone cap, per-commitment toggles, sign out.
-- Tests: 82 green (message engine, scheduling math incl. midnight/DST edges,
-  mocked-repo widget tests).
+- Tests: 84 green (message engine, scheduling math incl. midnight/DST edges,
+  mocked-repo widget tests incl. settings/permission screens).
 - Quality gates green: pub get, format, analyze (zero), test, debug APK.
 
 ## Next (Stage 4+, do NOT build yet)
