@@ -210,6 +210,21 @@
   `docs/FINAL_CHECKLIST.md` (live migration push, function deploy, Play
   rollout, real-phone verification).
 
+## Security audit (public-repo readiness)
+
+- Full read-first audit in `docs/SECURITY_AUDIT.md` (gitleaks clean history,
+  RLS verified on all 11 tables, manifest/DB hardening, supply chain clean).
+- Fixed in follow-up commits: release INTERNET permission, `allowBackup`
+  off, explicit no-cleartext, timezone-change cooldown + pause-date bounds
+  + invite-entropy + size-race lock + nudge-day pin (new hardening
+  migration, owner applies via `db push`), extended attack coverage in
+  `docs/rls_tests.sql`, `SECURITY.md`, pinned-SHA CI, Dependabot, edge JS
+  pin. Gates green (analyze zero, 135 tests, debug APK).
+- Still needs the owner: service_role rotation, hardening migration push,
+  live SQL tests, dashboard checklist, signed AAB, privacy URL, LICENSE
+  choice, GitHub settings (see audit §7). Verdict stays negative until
+  rotation is confirmed.
+
 ## How to run
 
 ```sh
