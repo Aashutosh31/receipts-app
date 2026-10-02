@@ -44,3 +44,14 @@ final pausesProvider = FutureProvider.autoDispose.family<List<Pause>, String>((
   }
   return ref.watch(contractRepositoryProvider).fetchPauses(contractId);
 });
+
+final contractChangesProvider = FutureProvider.autoDispose
+    .family<List<ContractChange>, String>((Ref ref, String contractId) async {
+      final String? userId = await ref.watch(currentUserIdProvider.future);
+      if (userId == null) {
+        return <ContractChange>[];
+      }
+      return ref
+          .watch(contractRepositoryProvider)
+          .fetchContractChanges(contractId);
+    });

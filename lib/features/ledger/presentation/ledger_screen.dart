@@ -178,6 +178,8 @@ class _LedgerBody extends ConsumerWidget {
                   );
                 },
               ),
+              const SizedBox(height: 24),
+              _ChangesSection(contractId: contract.id),
             ],
           ),
         ),
@@ -328,4 +330,48 @@ String _readable(Object error) {
     return error.message;
   }
   return 'Something went wrong loading the ledger.';
+}
+
+/// Read-only contract-changes history, including commitment retirements.
+/// Both the database trigger rows and the users' own written reasons appear.
+class _ChangesSection extends ConsumerWidget {
+  const _ChangesSection({required this.contractId});
+
+  final String contractId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<ContractChange>> changes = ref.watch(
+      contractChangesProvider(contractId),
+    );
+    return changes.maybeWhen(
+      data: (List<ContractChange> rows) {
+        if (rows.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final ThemeData theme = Theme.of(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text('Contract changes', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            for (final ContractChange change in rows)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  change.changeType == 'retire'
+                      ? Icons.archive_outlined
+                      : Icons.edit_note_outlined,
+                ),
+                title: Text(change.reason),
+                subtitle: Text(
+                  '${change.changeType} · ${formatServerDay(DateTime.utc(change.createdAt.year, change.createdAt.month, change.createdAt.day))}',
+                ),
+              ),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
 }

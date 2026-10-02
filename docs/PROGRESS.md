@@ -112,11 +112,35 @@
 - No emulator in this sandbox (system-image/emulator downloads stall), so
   on-device notification delivery still needs the real-phone checklist.
 
-## Next (Stage 4+, do NOT build yet)
+## Done (Stage 4: insights, letters, receipt, retire friction)
 
-- Letters UI (write day-1 letter, unlock views on days 30/60/90 via
-  `get_letters`), excuse analytics (top excuse with counts), drift cache
-  (Stage 5 only), squads (later). Notification-tap deep linking.
+- Packages (pub.dev verified): share_plus 13.3.1 + path_provider for the
+  shareable image. fl_chart 1.2.0 checked healthy but deliberately not used;
+  charts are plain Flutter widgets (zero new native deps, same render in the
+  share card).
+- Insights tab: top excuse with counts, weekday / commitment breakdowns,
+  weekly trend strip, and a data-generated one-line insight
+  (e.g. weekday or commitment concentration). Respectful empty states before
+  day 7 and when no excuses exist.
+- Letters tab: milestone cards (day 1/30/60/90) with server-time countdowns;
+  required day-1 writing screen (blocked back navigation until sealed);
+  reveal screens pairing each unlocked letter with since-day-1 stats
+  (kept rate, top excuse, streak).
+- Final Receipt (gated on day-90 unlock): promised vs kept, kept rate,
+  longest streak, top excuse, day-1 letter. Share button captures an
+  aggregates-only RepaintBoundary card to PNG and opens the platform share
+  sheet; letter text and free-text notes never leave the app.
+- Retire friction: per-commitment menu on Today opens a sheet showing live
+  streak + day number, requires a written reason, then retires (trigger row
+  plus user-reason row, both listed in a new Contract changes section on
+  the Ledger).
+- Tests: 110 green (analytics math + insight variants, letter countdown and
+  validation, receipt aggregates, RPC lock states via fakes).
+- Quality gates green: pub get, format, analyze (zero), test, debug APK.
+
+## Next (Stage 5+, do NOT build yet)
+
+- Drift cache (Stage 5 only), squads (later). Notification-tap deep linking.
 
 ## How to run
 

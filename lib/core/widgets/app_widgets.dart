@@ -184,6 +184,13 @@ class ReceiptsNavBar extends StatelessWidget {
 
   final int currentIndex;
 
+  static const List<String> _locations = <String>[
+    '/today',
+    '/ledger',
+    '/insights',
+    '/letters',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
@@ -192,7 +199,7 @@ class ReceiptsNavBar extends StatelessWidget {
         if (index == currentIndex) {
           return;
         }
-        context.go(index == 0 ? '/today' : '/ledger');
+        context.go(_locations[index]);
       },
       destinations: const <NavigationDestination>[
         NavigationDestination(
@@ -204,6 +211,16 @@ class ReceiptsNavBar extends StatelessWidget {
           icon: Icon(Icons.grid_on_outlined),
           selectedIcon: Icon(Icons.grid_on),
           label: 'Ledger',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.insights_outlined),
+          selectedIcon: Icon(Icons.insights),
+          label: 'Insights',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.mail_outlined),
+          selectedIcon: Icon(Icons.mail),
+          label: 'Letters',
         ),
       ],
     );

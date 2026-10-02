@@ -1,3 +1,25 @@
+## Stage 4 (insights, letters, receipt, retire friction)
+
+1. **Charts**: verified fl_chart 1.2.0 is healthy (7.2k likes, 150 pub
+   points, verified publisher) but chose plain Flutter widgets instead:
+   zero new dependency/version risk, matches the dark-minimal aesthetic,
+   and renders identically inside the shareable RepaintBoundary card.
+2. **Letters**: day-1 gate requires the day-0 letter until written
+   (PopScope-blocked, non-dismissible). Milestones 30/60/90 may be written
+   any time before unlock; bodies travel only via get_letters(), and the
+   RPC's is_unlocked flag (server time) is authoritative for reveals,
+   countdowns, and the Final Receipt gate.
+3. **Share image excludes private content**: the captured card shows
+   aggregates only (kept/total, longest streak, top excuse). Letter bodies
+   and excuse free texts never enter the shared image or share text.
+4. **Retire writes two rows**: UPDATE retired_at (the database trigger
+   auto-logs a system `retire` row) plus an explicit user-reason `retire`
+   row. Both appear in the Ledger's Contract changes section.
+5. **share_plus 13.3.1** (Flutter Favorite): `SharePlus.instance.share`
+   with `ShareParams(files, fileNameOverrides, sharePositionOrigin)` for the
+   iPad popover anchor. PNG bytes go to a temp file via path_provider.
+   See: https://pub.dev/packages/share_plus#share-files
+
 ## Auth-scoping hotfix (multi-user isolation)
 
 1. **User-scoped providers await the live user id**: `currentUserIdProvider`

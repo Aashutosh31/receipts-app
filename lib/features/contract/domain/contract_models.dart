@@ -120,3 +120,38 @@ class Pause {
     );
   }
 }
+
+/// One row of the append-only public.contract_changes log.
+class ContractChange {
+  const ContractChange({
+    required this.id,
+    required this.contractId,
+    this.commitmentId,
+    required this.changeType,
+    required this.reason,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String contractId;
+  final String? commitmentId;
+  final String changeType;
+  final String reason;
+  final DateTime createdAt;
+
+  /// True for rows written by the database retire trigger itself, as
+  /// opposed to rows carrying the user's own written reason.
+  bool get isSystemRetireNote =>
+      changeType == 'retire' && reason.startsWith('commitment retired: ');
+
+  factory ContractChange.fromMap(Map<String, dynamic> map) {
+    return ContractChange(
+      id: map['id'] as String,
+      contractId: map['contract_id'] as String,
+      commitmentId: map['commitment_id'] as String?,
+      changeType: map['change_type'] as String,
+      reason: map['reason'] as String,
+      createdAt: DateTime.parse(map['created_at'] as String),
+    );
+  }
+}

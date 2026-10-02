@@ -59,4 +59,34 @@ class StreakLogic {
       recoveriesUsed: mode == ContractMode.kind ? recoveriesUsed : 0,
     );
   }
+
+  /// Longest streak over the same walk as [calculateCurrentStreak]: the
+  /// recovery budget is consumed chronologically across the whole history,
+  /// and the maximum running value is reported.
+  static int longestStreak({
+    required List<DailyStreakInput> daysOldestFirst,
+    required ContractMode mode,
+    int maxRecoveries = 2,
+  }) {
+    int streak = 0;
+    int best = 0;
+    int recoveriesUsed = 0;
+    for (final DailyStreakInput day in daysOldestFirst) {
+      if (day.isPaused) {
+        continue;
+      }
+      if (day.allDone) {
+        streak += 1;
+      } else if (mode == ContractMode.kind && recoveriesUsed < maxRecoveries) {
+        recoveriesUsed += 1;
+        streak += 1;
+      } else {
+        streak = 0;
+      }
+      if (streak > best) {
+        best = streak;
+      }
+    }
+    return best;
+  }
 }

@@ -38,6 +38,17 @@ abstract class ContractRepository {
     required DateTime startDay,
   });
   Future<void> endPause({required String pauseId, required DateTime endDay});
+
+  /// Retires one commitment: sets retired_at (the database trigger logs a
+  /// system row automatically) and records the user's written reason as its
+  /// own `retire` row. Both rows stay visible in the Ledger.
+  Future<void> retireCommitment({
+    required String commitmentId,
+    required String contractId,
+    required String reason,
+  });
+
+  Future<List<ContractChange>> fetchContractChanges(String contractId);
 }
 
 class SupabaseContractRepository implements ContractRepository {
@@ -178,6 +189,53 @@ class SupabaseContractRepository implements ContractRepository {
           .eq('id', pauseId);
     } on PostgrestException catch (e) {
       throw ContractFailure('Could not end pause: ${e.message}');
+    }
+  }
+
+  @override
+  Future<void> retireCommitment({
+    required String commitmentId,
+    required String contractId,
+    required String reason,
+  }) async {
+    final String text = reason.trim();
+    if (text.isEmpty || text.length > 500) {
+      throw const ContractFailure(
+        'Give an honest reason (1-500 characters). It goes on the record.',
+      );
+    }
+    try {
+      await _client
+          .from('commitments')
+          .update(<String, dynamic>{
+            'retired_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', commitmentId);
+      await _client.from('contract_changes').insert(<String, dynamic>{
+        'user_id': _userId,
+        'contract_id': contractId,
+        'commitment_id': commitmentId,
+        'change_type': 'retire',
+        'reason': text,
+      });
+    } on PostgrestException catch (e) {
+      throw ContractFailure('Could not retire commitment: ${e.message}');
+    }
+  }
+
+  @override
+  Future<List<ContractChange>> fetchContractChanges(String contractId) async {
+    try {
+      final List<dynamic> rows = await _client
+          .from('contract_changes')
+          .select()
+          .eq('contract_id', contractId)
+          .order('created_at');
+      return rows
+          .map((dynamic e) => ContractChange.fromMap(e as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw ContractFailure('Could not load contract changes: ${e.message}');
     }
   }
 

@@ -9,9 +9,15 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/auth_providers.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/contract/presentation/onboarding_screen.dart';
+import '../../features/insights/presentation/insights_screen.dart';
 import '../../features/ledger/presentation/app_shell.dart';
 import '../../features/ledger/presentation/ledger_screen.dart';
 import '../../features/ledger/presentation/today_screen.dart';
+import '../../features/letters/domain/letter_models.dart';
+import '../../features/letters/presentation/final_receipt_screen.dart';
+import '../../features/letters/presentation/letter_reveal_screen.dart';
+import '../../features/letters/presentation/letter_write_screen.dart';
+import '../../features/letters/presentation/letters_screen.dart';
 import '../../features/reminders/presentation/permission_screen.dart';
 import '../../features/reminders/presentation/settings_screen.dart';
 
@@ -81,6 +87,59 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
         name: 'notifications-intro',
         builder: (BuildContext context, GoRouterState state) =>
             const PermissionScreen(),
+      ),
+      GoRoute(
+        path: '/insights',
+        name: 'insights',
+        builder: (BuildContext context, GoRouterState state) =>
+            const InsightsScreen(),
+      ),
+      GoRoute(
+        path: '/letters',
+        name: 'letters',
+        builder: (BuildContext context, GoRouterState state) =>
+            const LettersScreen(),
+      ),
+      GoRoute(
+        path: '/letters/write',
+        name: 'letter-write',
+        builder: (BuildContext context, GoRouterState state) {
+          final Map<String, String> query = state.uri.queryParameters;
+          final int milestone = int.tryParse(query['milestone'] ?? '0') ?? 0;
+          if (!letterMilestones.contains(milestone)) {
+            return const Scaffold(
+              body: SafeArea(
+                child: Center(child: Text('Unknown letter milestone.')),
+              ),
+            );
+          }
+          return LetterWriteScreen(
+            milestone: milestone,
+            isRequired: query['required'] == 'true',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/letters/reveal/:milestone',
+        name: 'letter-reveal',
+        builder: (BuildContext context, GoRouterState state) {
+          final int milestone =
+              int.tryParse(state.pathParameters['milestone'] ?? '') ?? -1;
+          if (!letterMilestones.contains(milestone)) {
+            return const Scaffold(
+              body: SafeArea(
+                child: Center(child: Text('Unknown letter milestone.')),
+              ),
+            );
+          }
+          return LetterRevealScreen(milestone: milestone);
+        },
+      ),
+      GoRoute(
+        path: '/letters/final',
+        name: 'final-receipt',
+        builder: (BuildContext context, GoRouterState state) =>
+            const FinalReceiptScreen(),
       ),
     ],
     errorBuilder: (BuildContext context, GoRouterState state) {

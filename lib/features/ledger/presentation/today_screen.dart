@@ -12,8 +12,10 @@ import '../../contract/data/contract_repository.dart';
 import '../../contract/domain/contract_models.dart';
 import '../../contract/presentation/contract_providers.dart';
 import '../../contract/presentation/pause_sheet.dart';
+import '../../contract/presentation/retire_sheet.dart';
 import '../../excuse/domain/excuse_models.dart';
 import '../../excuse/presentation/excuse_sheet.dart';
+import '../../letters/presentation/letter_providers.dart';
 import '../../reminders/presentation/reminder_providers.dart';
 import '../data/ledger_repository.dart';
 import '../domain/ledger_models.dart';
@@ -67,6 +69,9 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
 
   /// Permission intro is offered once per signed contract session.
   bool _permissionPrompted = false;
+
+  /// Day-1 letter gate shown once until the day-0 letter exists.
+  bool _letterGateShown = false;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +130,7 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
 
     _maybeShowExcuses();
     _maybeShowPermissionGate();
+    _maybeShowLetterGate();
     // Keep the 7-day reminder window fresh while Today is visible.
     // Best-effort: this UI never depends on the result.
     ref.watch(reminderRefreshProvider);
@@ -178,6 +184,11 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
                     entry: entry,
                     enabled: !isPaused,
                     onDone: () => _submitDone(entry),
+                    onRetire: () => _retireFlow(
+                      entry,
+                      info.currentStreak,
+                      dayNumber(widget.contract.startDate, today),
+                    ),
                   ),
               const SizedBox(height: 16),
               OutlinedButton(
@@ -253,6 +264,43 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       }
       context.push('/notifications/intro');
     });
+  }
+
+  void _maybeShowLetterGate() {
+    // Watch so this rebuilds once letters finish loading.
+    final letters = ref
+        .watch(lettersProvider(widget.contract.id))
+        .maybeWhen(data: (value) => value, orElse: () => null);
+    if (letters == null) {
+      return;
+    }
+    final bool hasDayOne = letters.any((letter) => letter.unlockDayNumber == 0);
+    if (hasDayOne) {
+      _letterGateShown = false;
+      return;
+    }
+    if (_letterGateShown) {
+      return;
+    }
+    _letterGateShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      context.push('/letters/write?milestone=0&required=true');
+    });
+  }
+
+  Future<void> _retireFlow(LedgerEntry entry, int streak, int dayNumber) async {
+    await showRetireSheet(
+      context: context,
+      ref: ref,
+      contract: widget.contract,
+      commitmentId: entry.commitmentId,
+      commitmentTitle: entry.commitmentTitle,
+      streak: streak,
+      dayNumber: dayNumber,
+    );
   }
 
   Future<void> _submitDone(LedgerEntry entry) async {
@@ -357,11 +405,13 @@ class _CommitmentRow extends StatelessWidget {
     required this.entry,
     required this.enabled,
     required this.onDone,
+    required this.onRetire,
   });
 
   final LedgerEntry entry;
   final bool enabled;
   final VoidCallback onDone;
+  final VoidCallback onRetire;
 
   @override
   Widget build(BuildContext context) {
@@ -371,12 +421,34 @@ class _CommitmentRow extends StatelessWidget {
       child: ListTile(
         title: Text(entry.commitmentTitle),
         subtitle: Text(done ? 'Done. On the record.' : 'Not yet logged today.'),
-        trailing: done
-            ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
-            : FilledButton.tonal(
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (done)
+              Icon(Icons.check_circle, color: theme.colorScheme.primary)
+            else
+              FilledButton.tonal(
                 onPressed: enabled ? onDone : null,
                 child: const Text('Done'),
               ),
+            if (!done)
+              PopupMenuButton<String>(
+                tooltip: 'More actions',
+                onSelected: (String value) {
+                  if (value == 'retire') {
+                    onRetire();
+                  }
+                },
+                itemBuilder: (BuildContext context) =>
+                    const <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(
+                        value: 'retire',
+                        child: Text('Retire…'),
+                      ),
+                    ],
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -97,6 +97,20 @@ class FakeContracts implements ContractRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> retireCommitment({
+    required String commitmentId,
+    required String contractId,
+    required String reason,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<ContractChange>> fetchContractChanges(String contractId) async {
+    return <ContractChange>[];
+  }
 }
 
 void main() {
