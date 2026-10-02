@@ -16,6 +16,9 @@ import '../../contract/presentation/retire_sheet.dart';
 import '../../excuse/domain/excuse_models.dart';
 import '../../excuse/presentation/excuse_sheet.dart';
 import '../../letters/presentation/letter_providers.dart';
+import '../../offline/presentation/offline_providers.dart';
+import '../../offline/presentation/offline_today.dart';
+import '../../offline/presentation/outbox_screen.dart';
 import '../../reminders/presentation/reminder_providers.dart';
 import '../data/ledger_repository.dart';
 import '../domain/ledger_models.dart';
@@ -27,6 +30,18 @@ class TodayScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<Contract?> active = ref.watch(activeContractProvider);
+    // Reconnect: re-run sync, then reload network data.
+    ref.listen(onlineProvider, (AsyncValue<bool>? prev, AsyncValue<bool> next) {
+      final bool was =
+          prev?.maybeWhen(data: (bool v) => v, orElse: () => true) ?? true;
+      final bool isNow = next.maybeWhen(
+        data: (bool v) => v,
+        orElse: () => true,
+      );
+      if (!was && isNow) {
+        ref.invalidate(syncNowProvider);
+      }
+    });
     return active.when(
       data: (Contract? contract) {
         if (contract == null) {
@@ -40,6 +55,12 @@ class TodayScreen extends ConsumerWidget {
             ),
             bottomNavigationBar: const ReceiptsNavBar(currentIndex: 0),
           );
+        }
+        final bool online = ref
+            .watch(onlineProvider)
+            .maybeWhen(data: (bool v) => v, orElse: () => true);
+        if (!online) {
+          return OfflineTodayBody(contract: contract);
         }
         return _TodayBody(contract: contract);
       },
@@ -150,12 +171,14 @@ class _TodayBodyState extends ConsumerState<_TodayBody> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
+            ref.invalidate(syncNowProvider);
             ref.invalidate(ledgerProvider(widget.contract.id));
             ref.invalidate(streakProvider(widget.contract.id));
           },
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: <Widget>[
+              const OutboxBanner(),
               _HeaderCard(
                 contract: widget.contract,
                 streak: info,

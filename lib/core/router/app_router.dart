@@ -18,6 +18,7 @@ import '../../features/letters/presentation/final_receipt_screen.dart';
 import '../../features/letters/presentation/letter_reveal_screen.dart';
 import '../../features/letters/presentation/letter_write_screen.dart';
 import '../../features/letters/presentation/letters_screen.dart';
+import '../../features/offline/presentation/outbox_screen.dart';
 import '../../features/reminders/presentation/permission_screen.dart';
 import '../../features/reminders/presentation/settings_screen.dart';
 
@@ -140,6 +141,12 @@ final appRouterProvider = Provider<GoRouter>((Ref ref) {
         name: 'final-receipt',
         builder: (BuildContext context, GoRouterState state) =>
             const FinalReceiptScreen(),
+      ),
+      GoRoute(
+        path: '/outbox',
+        name: 'outbox',
+        builder: (BuildContext context, GoRouterState state) =>
+            const OutboxScreen(),
       ),
     ],
     errorBuilder: (BuildContext context, GoRouterState state) {

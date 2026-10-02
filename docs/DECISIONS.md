@@ -1,3 +1,22 @@
+## Stage 5A (offline outbox with drift)
+
+1. **drift 2.35.1 + drift_flutter 0.3.1** (codegen via drift_dev +
+   build_runner, committed `.g.dart`). One SQLite file, every row keyed by
+   owning user_id; queries always filter by it.
+   See: https://drift.simonbinder.eu/docs/getting-started/
+2. **Server judges, client explains**: outbox rows carry the device-date day;
+   late arrivals are rejected by the existing same-day trigger. Rejections
+   are marked failed with the server message verbatim and kept until the
+   user dismisses them — never silently dropped, never auto-retried into
+   the same wall (a duplicate-key rejection counts as sent: the row exists).
+3. **Offline numbers are labeled approximate**: streak/day-number derive
+   locally from cache via the existing pure StreakLogic; only the server
+   RPCs date records.
+4. **bluetooth-only counts as offline** for sync purposes (needs wifi,
+   mobile, or ethernet).
+5. **Sync points**: app open (Gate), reconnect (connectivity listener),
+   pull-to-refresh, post-mutation invalidates — never blocking UI.
+
 ## Stage 4 (insights, letters, receipt, retire friction)
 
 1. **Charts**: verified fl_chart 1.2.0 is healthy (7.2k likes, 150 pub

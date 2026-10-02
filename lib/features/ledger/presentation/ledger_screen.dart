@@ -11,6 +11,8 @@ import '../../auth/presentation/auth_screen.dart';
 import '../../contract/data/contract_repository.dart';
 import '../../contract/domain/contract_models.dart';
 import '../../contract/presentation/contract_providers.dart';
+import '../../offline/presentation/offline_providers.dart';
+import '../../offline/presentation/outbox_screen.dart';
 import '../data/ledger_repository.dart';
 import '../domain/ledger_models.dart';
 import 'ledger_providers.dart';
@@ -34,6 +36,12 @@ class LedgerScreen extends ConsumerWidget {
             ),
             bottomNavigationBar: const ReceiptsNavBar(currentIndex: 1),
           );
+        }
+        final bool online = ref
+            .watch(onlineProvider)
+            .maybeWhen(data: (bool v) => v, orElse: () => true);
+        if (!online) {
+          return _OfflineLedgerBody(contract: contract);
         }
         return _LedgerBody(contract: contract);
       },
@@ -134,6 +142,7 @@ class _LedgerBody extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: <Widget>[
+              const OutboxBanner(),
               Text(
                 '$kept kept · $missed missed · read-only, permanent',
                 semanticsLabel:
@@ -187,53 +196,51 @@ class _LedgerBody extends ConsumerWidget {
       bottomNavigationBar: const ReceiptsNavBar(currentIndex: 1),
     );
   }
+}
 
-  void _showDay(
-    BuildContext context,
-    DateTime day,
-    LedgerDay summary,
-    List<LedgerEntry> rows,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  '${formatServerDay(day)} · ${_dayLabel(summary.status)}',
-                  style: Theme.of(sheetContext).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      for (final LedgerEntry row in rows)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(row.commitmentTitle),
-                          trailing: Text(
-                            _rowLabel(row),
-                            style: TextStyle(
-                              color: _rowColor(sheetContext, row),
-                            ),
-                          ),
+void _showDay(
+  BuildContext context,
+  DateTime day,
+  LedgerDay summary,
+  List<LedgerEntry> rows,
+) {
+  showModalBottomSheet<void>(
+    context: context,
+    builder: (BuildContext sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                '${formatServerDay(day)} · ${_dayLabel(summary.status)}',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    for (final LedgerEntry row in rows)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(row.commitmentTitle),
+                        trailing: Text(
+                          _rowLabel(row),
+                          style: TextStyle(color: _rowColor(sheetContext, row)),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
 }
 
 class _DayCell extends StatelessWidget {
@@ -372,6 +379,115 @@ class _ChangesSection extends ConsumerWidget {
         );
       },
       orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+/// Offline Ledger body: the same read-only grid rendered from cached rows,
+/// with an honest cached-data banner. Contract changes are a live-only
+/// section (brief scopes the cache to contract/commitments/ledger).
+class _OfflineLedgerBody extends ConsumerWidget {
+  const _OfflineLedgerBody({required this.contract});
+
+  final Contract contract;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<LedgerEntry>> cached = ref.watch(
+      cachedLedgerProvider(contract.id),
+    );
+    return cached.when(
+      data: (List<LedgerEntry> entries) {
+        if (entries.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Ledger')),
+            body: const EmptyView(
+              message:
+                  'Offline with no cached ledger yet. '
+                  'Open the app online once to cache it.',
+            ),
+            bottomNavigationBar: const ReceiptsNavBar(currentIndex: 1),
+          );
+        }
+        final DateTime now = DateTime.now();
+        final DateTime deviceToday = DateTime.utc(now.year, now.month, now.day);
+        final Map<DateTime, LedgerDay> byDay = <DateTime, LedgerDay>{
+          for (final LedgerDay d in summarizeLedgerDays(entries, deviceToday))
+            d.day: d,
+        };
+        final Map<DateTime, List<LedgerEntry>> rowsByDay =
+            <DateTime, List<LedgerEntry>>{};
+        for (final LedgerEntry e in entries) {
+          rowsByDay.putIfAbsent(e.day, () => <LedgerEntry>[]).add(e);
+        }
+        final DateTime start = DateTime.utc(
+          contract.startDate.year,
+          contract.startDate.month,
+          contract.startDate.day,
+        );
+        final List<DateTime> allDays = List<DateTime>.generate(
+          90,
+          (int i) => start.add(Duration(days: i)),
+        );
+        return Scaffold(
+          appBar: AppBar(title: const Text('Ledger')),
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: <Widget>[
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Offline — showing cached ledger. Read-only as always.',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const OutboxBanner(),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 7,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                  ),
+                  itemCount: allDays.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    final DateTime day = allDays[index];
+                    final LedgerDay? summary = byDay[day];
+                    return _DayCell(
+                      day: day,
+                      summary: summary,
+                      isToday: day == deviceToday,
+                      onTap: summary == null
+                          ? null
+                          : () => _showDay(
+                              context,
+                              day,
+                              summary,
+                              rowsByDay[day] ?? const <LedgerEntry>[],
+                            ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: const ReceiptsNavBar(currentIndex: 1),
+        );
+      },
+      loading: () =>
+          const Scaffold(body: LoadingView(message: 'Loading cached ledger…')),
+      error: (Object error, StackTrace _) => Scaffold(
+        body: ErrorView(
+          message: 'Could not load cached ledger.',
+          onRetry: () => ref.invalidate(cachedLedgerProvider(contract.id)),
+        ),
+        bottomNavigationBar: const ReceiptsNavBar(currentIndex: 1),
+      ),
     );
   }
 }

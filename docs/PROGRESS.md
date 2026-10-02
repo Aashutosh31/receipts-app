@@ -138,7 +138,20 @@
   validation, receipt aggregates, RPC lock states via fakes).
 - Quality gates green: pub get, format, analyze (zero), test, debug APK.
 
-## Next (Stage 5+, do NOT build yet)
+## Done (Stage 5A: offline outbox)
+
+- drift 2.35.1 + drift_flutter 0.3.1 cache contract/commitments/ledger for
+  offline reading (codegen committed); outbox queue for offline check-ins
+  with pending/failed states; late arrivals rejected by the server stay
+  visible with the server message until dismissed — never silently dropped.
+- Sync on app open, reconnect, pull-to-refresh, and after mutations;
+  connectivity_plus gating (wifi/mobile/ethernet only). Offline Today/Ledger
+  render from cache with honest approximate labels; Outbox screen + banners.
+- Tests: 120 green, incl. in-memory drift tests (queue, rejection honesty,
+  duplicate-as-sent, cache round-trip, per-user isolation).
+- Quality gates green: pub get, format, analyze (zero), test, debug APK.
+
+## Next (Stage 5B/C: squads, release readiness)
 
 - Drift cache (Stage 5 only), squads (later). Notification-tap deep linking.
 
