@@ -49,3 +49,4 @@ app.*.map.json
 
 # Receipts secrets: never commit real keys (AGENTS.md security rules).
 env.json
+supabase/.temp/
