@@ -69,6 +69,15 @@
   read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
   tested or built.
 
+## Fixed (auth-scoping hotfix)
+
+- Multi-user isolation bug: user-scoped providers survived sign-out/sign-in,
+  so User B/C saw User A's cached contract. Fixed by scoping every
+  user-data provider to the live auth user id (`currentUserIdProvider`) plus
+  autoDispose, and per-user reminder-settings keys. Backend RLS untouched
+  (was already correct). Regression tests: A -> null -> B refetch behavior
+  and per-user settings isolation. Tests: 86 green.
+
 ## Done (Stage 3: local reminders)
 
 - Packages (pub.dev latest stable): flutter_local_notifications 22.3.1,

@@ -1,3 +1,18 @@
+## Auth-scoping hotfix (multi-user isolation)
+
+1. **User-scoped providers await the live user id**: `currentUserIdProvider`
+   (from the Supabase auth stream) is watched by every user-data provider, so
+   A -> null -> B always refetches and signed-out reads short-circuit to
+   null/empty without querying. RLS remains the server-side enforcement;
+   providers just stop serving cross-user memory cache.
+2. **autoDispose on user-scoped providers**: caches die with their last
+   listener as defense in depth alongside the session watch.
+3. **Per-user reminder settings keys**: `reminder_settings_v1_<userId>`
+   (signed-out gets an unreachable key), so shared devices cannot leak
+   quiet hours, tone, toggles, or permission state across users.
+4. **Test fakes replay an initial session** like gotrue does, so provider
+   tests settle deterministically (`test/test_fakes.dart`).
+
 ## Stage 3 (reminders)
 
 1. **Exact alarms via SCHEDULE_EXACT_ALARM, never USE_EXACT_ALARM**: the

@@ -17,6 +17,17 @@ final authChangesProvider = StreamProvider<AuthState>(
   (Ref ref) => ref.watch(authRepositoryProvider).authStateChanges,
 );
 
+/// Live authenticated user id. Transitions userA -> null on sign-out ->
+/// userB on sign-in. Every user-scoped provider awaits this, so a user
+/// change always causes a fresh query and one user's cached rows can never
+/// be served to another user (multi-user isolation fix).
+final currentUserIdProvider = StreamProvider<String?>(
+  (Ref ref) => ref
+      .watch(authRepositoryProvider)
+      .authStateChanges
+      .map((AuthState state) => state.session?.user.id),
+);
+
 /// Notifies go_router's refreshListenable whenever auth state changes.
 class AuthRefreshNotifier extends ChangeNotifier {
   AuthRefreshNotifier(Stream<AuthState> changes) {

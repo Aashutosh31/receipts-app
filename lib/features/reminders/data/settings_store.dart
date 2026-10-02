@@ -78,14 +78,19 @@ class ReminderSettings {
 }
 
 class ReminderSettingsStore {
-  ReminderSettingsStore(this._prefs);
+  /// Settings are scoped per authenticated user so two users sharing one
+  /// device can never read each other's quiet hours, tone, toggles, or
+  /// permission state. A null [userId] (signed out) gets an isolated key
+  /// that no signed-in user can reach.
+  ReminderSettingsStore(this._prefs, {required String? userId})
+    : _key = 'reminder_settings_v1_${userId ?? 'signed-out'}';
 
-  static const String key = 'reminder_settings_v1';
+  final String _key;
 
   final SharedPreferences _prefs;
 
   ReminderSettings load() {
-    final String? raw = _prefs.getString(key);
+    final String? raw = _prefs.getString(_key);
     if (raw == null || raw.isEmpty) {
       return const ReminderSettings();
     }
@@ -121,7 +126,7 @@ class ReminderSettingsStore {
           return '${e.key}=$value';
         })
         .join(';');
-    return _prefs.setString(key, encoded);
+    return _prefs.setString(_key, encoded);
   }
 
   static Object _decodeValue(String raw) {

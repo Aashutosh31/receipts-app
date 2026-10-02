@@ -5,6 +5,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../auth/presentation/auth_providers.dart';
 import '../../contract/domain/contract_models.dart';
 import '../../contract/presentation/contract_providers.dart';
 import '../../excuse/domain/excuse_models.dart';
@@ -23,14 +24,15 @@ final sharedPrefsProvider = FutureProvider<SharedPreferences>(
   (Ref ref) => SharedPreferences.getInstance(),
 );
 
-final settingsStoreProvider = FutureProvider<ReminderSettingsStore>((
-  Ref ref,
-) async {
-  final SharedPreferences prefs = await ref.watch(sharedPrefsProvider.future);
-  return ReminderSettingsStore(prefs);
-});
+final settingsStoreProvider = FutureProvider.autoDispose<ReminderSettingsStore>(
+  (Ref ref) async {
+    final SharedPreferences prefs = await ref.watch(sharedPrefsProvider.future);
+    final String? userId = await ref.watch(currentUserIdProvider.future);
+    return ReminderSettingsStore(prefs, userId: userId);
+  },
+);
 
-final reminderSettingsProvider = FutureProvider<ReminderSettings>((
+final reminderSettingsProvider = FutureProvider.autoDispose<ReminderSettings>((
   Ref ref,
 ) async {
   final ReminderSettingsStore store = await ref.watch(
@@ -42,7 +44,9 @@ final reminderSettingsProvider = FutureProvider<ReminderSettings>((
 /// Cancels everything and schedules the next 7 days. Runs on every app open
 /// (covers app updates, reboots via the plugin boot receiver plus window
 /// extension here, timezone changes, and contract edits).
-final reminderRefreshProvider = FutureProvider<void>((Ref ref) async {
+final reminderRefreshProvider = FutureProvider.autoDispose<void>((
+  Ref ref,
+) async {
   try {
     final Contract? contract = await ref.watch(activeContractProvider.future);
     if (contract == null) {
@@ -97,7 +101,9 @@ class ReminderStatus {
   final int pending;
 }
 
-final reminderStatusProvider = FutureProvider<ReminderStatus>((Ref ref) async {
+final reminderStatusProvider = FutureProvider.autoDispose<ReminderStatus>((
+  Ref ref,
+) async {
   final NotificationService service = ref.watch(notificationServiceProvider);
   if (service is LocalNotificationService && !service.isReady) {
     return const ReminderStatus(enabled: false, exact: false, pending: 0);

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:receipts/features/auth/presentation/auth_providers.dart';
 import 'package:receipts/features/contract/data/contract_repository.dart';
 import 'package:receipts/features/contract/domain/contract_draft.dart';
 import 'package:receipts/features/contract/domain/contract_models.dart';
@@ -12,6 +13,8 @@ import 'package:receipts/features/reminders/presentation/permission_screen.dart'
 import 'package:receipts/features/reminders/presentation/reminder_providers.dart';
 import 'package:receipts/features/reminders/presentation/settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_fakes.dart';
 
 class _FakeContracts implements ContractRepository {
   @override
@@ -114,6 +117,9 @@ class _FakeNotifications implements NotificationService {
 Widget _harness(Widget child) {
   return ProviderScope(
     overrides: [
+      authRepositoryProvider.overrideWithValue(
+        FakeAuthRepository(initialUserId: 'user-1'),
+      ),
       contractRepositoryProvider.overrideWithValue(_FakeContracts()),
       notificationServiceProvider.overrideWithValue(_FakeNotifications()),
     ],

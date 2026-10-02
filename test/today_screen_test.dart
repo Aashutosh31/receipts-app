@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:receipts/features/auth/presentation/auth_providers.dart';
 import 'package:receipts/features/contract/data/contract_repository.dart';
 import 'package:receipts/features/contract/domain/contract_draft.dart';
 import 'package:receipts/features/contract/domain/contract_models.dart';
@@ -14,6 +15,8 @@ import 'package:receipts/features/ledger/data/ledger_repository.dart';
 import 'package:receipts/features/ledger/domain/ledger_models.dart';
 import 'package:receipts/features/ledger/presentation/ledger_providers.dart';
 import 'package:receipts/features/ledger/presentation/today_screen.dart';
+
+import 'test_fakes.dart';
 
 final DateTime _today = DateTime.utc(2026, 10, 5);
 
@@ -142,6 +145,9 @@ class FakeExcuseRepository implements ExcuseRepository {
 Widget _harness() {
   return ProviderScope(
     overrides: [
+      authRepositoryProvider.overrideWithValue(
+        FakeAuthRepository(initialUserId: 'user-1'),
+      ),
       contractRepositoryProvider.overrideWithValue(FakeContractRepository()),
       ledgerRepositoryProvider.overrideWithValue(FakeLedgerRepository()),
       excuseRepositoryProvider.overrideWithValue(FakeExcuseRepository()),
