@@ -49,6 +49,12 @@ serve(async (req: Request): Promise<Response> => {
   const admin = createClient(supabaseUrl, serviceKey);
   const { error } = await admin.auth.admin.deleteUser(user.id);
   if (error) {
+    console.error('delete-account admin delete failed', {
+      message: error.message,
+      name: error.name,
+      status: error.status,
+      code: error.code,
+    });
     return Response.json({ error: 'Delete failed' }, { status: 500 });
   }
   return Response.json({ deleted: true });
