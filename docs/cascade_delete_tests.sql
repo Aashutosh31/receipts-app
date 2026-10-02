@@ -1,6 +1,7 @@
 -- docs/cascade_delete_tests.sql
 -- SQL-level regression tests for the auth-cascade delete bypass
--- (migration 20261002170555_auth_cascade_delete.sql).
+-- (migrations 20261002170555_auth_cascade_delete.sql and
+-- 20261002174007_auth_cascade_session_user.sql).
 --
 -- HOW TO RUN (Supabase SQL Editor, as database owner):
 --   1. Apply all migrations in supabase/migrations/ first.
@@ -18,8 +19,10 @@
 --       delete policy);
 --   (b) non-cascade roles (even the owner) still hit the 25001 trigger on
 --       direct contract/check-in deletes;
---   (c) deleting auth.users as supabase_auth_admin cascades through
---       contracts, commitments, and check-ins with no 25001;
+--   (c) deleting auth.users under a real supabase_auth_admin SESSION
+--       (via SET SESSION AUTHORIZATION, superuser-only) cascades through
+--       contracts, commitments, and check-ins with no 25001. Plain
+--       SET ROLE would only change current_user and stay blocked;
 --   (d) the bypass helper keys on session_user (robust to SECURITY DEFINER
 --       hops, which rewrite current_user) and is not definer itself.
 
@@ -126,9 +129,14 @@ $$;
 
 -- ---------------------- (c) auth cascade deletes through the blockers
 -- Supabase Auth deletes auth.users as supabase_auth_admin (see production
--- postgres_logs: role supabase_auth_admin, DELETE FROM users). SET ROLE
--- works here because this script runs as the database owner.
-set role supabase_auth_admin;
+-- postgres_logs: db_role supabase_auth_admin, DELETE FROM users).
+-- The bypass helper keys on session_user, so this section must change the
+-- SESSION identity, not merely SET ROLE (which only rewrites current_user
+-- and would still be blocked, exactly like the production failure before
+-- the session_user fix). SET SESSION AUTHORIZATION requires superuser;
+-- the SQL Editor runs as postgres, so this works here. Everything below
+-- still rolls back at the end.
+set session authorization supabase_auth_admin;
 
 do $$
 declare
@@ -154,7 +162,10 @@ begin
 end;
 $$;
 
-reset role;
+-- Back to the owner session for the remaining checks. (RESET ROLE alone
+-- would not suffice: it restores current_user but leaves session_user
+-- switched, which is precisely the distinction under test.)
+reset session authorization;
 
 -- -------- (d) bypass helper keys on session_user, stays invoker, read-only
 -- current_user can change under SECURITY DEFINER execution while
