@@ -17,18 +17,10 @@ create table if not exists public.squads (
 
 alter table public.squads enable row level security;
 
--- Members can read squads they belong to. Joining happens via the
--- join_squad() RPC (invite codes must not be enumerable by non-members).
-drop policy if exists "squads_select_member" on public.squads;
-create policy "squads_select_member"
-  on public.squads for select
-  to authenticated
-  using (
-    exists (
-      select 1 from public.squad_members m
-      where m.squad_id = squads.id and m.user_id = auth.uid()
-    )
-  );
+-- NOTE: the squads member-gated SELECT policy lives below, right after the
+-- squad_members table is created. Postgres validates policy expressions at
+-- CREATE POLICY time, so it cannot reference squad_members before that
+-- table exists (SQLSTATE 42P01 on first apply).
 
 -- ---------------------------------------------------------- squad_members
 create table if not exists public.squad_members (
@@ -54,6 +46,19 @@ create policy "squad_members_delete_own"
   on public.squad_members for delete
   to authenticated
   using (auth.uid() = user_id);
+
+-- Members can read squads they belong to. Joining happens via the
+-- join_squad() RPC (invite codes must not be enumerable by non-members).
+drop policy if exists "squads_select_member" on public.squads;
+create policy "squads_select_member"
+  on public.squads for select
+  to authenticated
+  using (
+    exists (
+      select 1 from public.squad_members m
+      where m.squad_id = squads.id and m.user_id = auth.uid()
+    )
+  );
 
 -- Max 5 members per squad, enforced immediately.
 create or replace function public.enforce_squad_size()
