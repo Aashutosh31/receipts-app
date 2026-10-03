@@ -23,8 +23,9 @@
 - [x] `applicationId: com.receipts.receipts`, version from `pubspec.yaml`
       (`1.0.0+1`; bump `+N` per Play upload).
 - [x] Release signing via `android/key.properties` (gitignored template at
-      `android/key.properties.example`); debug-key fallback keeps local
-      `--release` runs working without secrets.
+      `android/key.properties.example`); release builds fail fast with a
+      clear error when it is missing — debug keys are never used for
+      release.
 - [x] `flutter build appbundle --release` succeeds (JDK 17 workaround as
       usual). Output: `build/app/outputs/bundle/release/app-release.aab`.
 - [x] `docs/RELEASE.md`: keystore steps, bundle build, internal-testing

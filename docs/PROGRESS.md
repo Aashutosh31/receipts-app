@@ -255,6 +255,15 @@
   choice, GitHub settings (see audit §7). Verdict stays negative until
   rotation is confirmed.
 
+## Done (final reconciliation toward v1.0.0)
+
+- Owner-confirmed completed: service_role rotated + old key retired;
+  hardening migration pushed live; RLS + squad SQL tests green;
+  MIT LICENSE added; email deep-link flow working; excuse date-parsing
+  fix; signed release APK smoke-tested; CI green after checkout-SHA fix.
+- Final audit reconciliation in `docs/SECURITY_AUDIT.md` (final verdict,
+  release-asset verification, deep-link review). Tests: 145 green.
+
 ## How to run
 
 ```sh

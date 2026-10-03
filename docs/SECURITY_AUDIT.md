@@ -1,14 +1,19 @@
 # Security Audit — Receipts (public-repo readiness)
 
-- Date: 2026-10-02. Auditor: automated read-first review (code, migrations,
-  history, build output) plus live-verified owner results where noted.
+- Date: 2026-10-02 (initial read-first audit) + final reconciliation against
+  `main` @ `f8d5b96`, tag `v1.0.0`, and the published `receipts-v1.0.0.apk`
+  release asset (SHA-256 verified identical to the local release build).
+  Auditor: automated read-first review (code, migrations, history, build
+  output) plus live-verified owner results where noted.
 - Scope: entire repo at `main` — git history, Supabase schema/functions,
   Flutter/Android app, dependencies, docs, Edge Functions.
 - Method: gitleaks 8.30.1 (official GitHub release) over full history +
-  worktree; manual grep review; APK disassembly (`unzip` + `strings`, no
-  sudo); all 7 migration files read end-to-end; primary sources only
-  (supabase.com/docs, docs.flutter.dev, developer.android.com, pub.dev
-  pages/changelogs, postgresql.org/docs, owasp.org, official tool repos).
+  worktree, re-run for this reconciliation (39 commits, no leaks); manual
+  grep review; APK disassembly (`unzip` + `strings` + `apkanalyzer`, no
+  sudo) of the exact published `v1.0.0` bytes; all 10 migration files read
+  end-to-end; primary sources only (supabase.com/docs, docs.flutter.dev,
+  developer.android.com, pub.dev pages/changelogs, postgresql.org/docs,
+  owasp.org, official tool repos).
 - Rule: nothing below was changed to produce this report. Fixes follow in
   separate small commits; each finding carries status Open/Fixed or
   Needs-manual-action.
@@ -23,11 +28,17 @@
 - **Low**: hardening gap with limited impact.
 - **Info**: verified-safe item, non-finding, or future consideration.
 
-## Verdict (updated at the end)
+## Verdict (final reconciliation)
 
-**NOT SAFE YET** — see "Needs-manual-action" (§7). Code fixables are
-addressed in this audit's fix commits, but rotation confirmation and
-owner-side dashboard/build steps are still outstanding.
+**SAFE TO KEEP PUBLIC** — with the scope notes below. All code-fixable
+findings are fixed and committed; the full history is secret-clean; the
+exact published `v1.0.0` bytes carry only the anon key and the upload-key
+signature recorded in the release notes. The service_role rotation that
+gated the original verdict is confirmed done by the owner (rotation itself
+is dashboard-side and not verifiable from this tree; the absence of any
+exposure vector in-repo is verified). Remaining §7 items are production
+hygiene (dashboard advisors/CAPTCHA review, Play rollout, key migration
+before end-2026), not public-repo blockers.
 
 ---
 
@@ -58,8 +69,9 @@ owner-side dashboard/build steps are still outstanding.
   replace everywhere used (Edge Function secret) → confirm → retire the
   old key. Official procedure:
   https://supabase.com/docs/guides/api/api-keys#rotate-a-leaked-or-compromised-key
-- **Status**: Needs-manual-action. The repo verdict stays negative until
-  rotation is confirmed.
+- **Status**: Resolved — owner confirms rotation done and the old key
+  retired. No exposure was ever found (§F-01 evidence stands); the
+  rotation closes even the theoretical agent-readability window.
 
 ### F-02 — gitleaks worktree hits are non-issues (Info)
 
@@ -308,8 +320,16 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 
 - Zero `print`/`debugPrint`/`developer.log` in `lib/`.
 - User error surfaces are friendly-prefix + server text (F-10, accepted).
-- No custom URL schemes, no deep-link intent filters, no WebViews, no HTML
-  rendering; `app_links` present only as an unused supabase transitive dep.
+- Deep links: exactly one custom-scheme filter
+  (`com.receipts.receipts://auth-callback`, email confirmation only),
+  present in source manifest and confirmed merged into the shipped release
+  binary. No other schemes, no WebViews, no HTML rendering; `app_links`
+  present only as an unused supabase transitive dep. The callback handler
+  is supabase_flutter's own `getSessionFromUrl` exchange (PKCE code bound
+  to the in-app verifier); the app performs no navigation on link content,
+  so there is no open-redirect or cross-user deep-link risk. iOS is not
+  wired (Android-focused release) — documented in code, no iOS artifact
+  ships the scheme.
 - All user text length-checked in UI (`maxLength` matching DB CHECKs:
   120/500/280/5000/60/6) and in DB constraints; invite input normalized +
   server-validated.
@@ -335,13 +355,13 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 ## PART 5 — Public repo hygiene
 
 - `SECURITY.md`: ADDED (private vulnerability reporting via GitHub).
-- `LICENSE`: missing. Options — MIT (permissive, simple), Apache-2.0
-  (permissive + patent grant), GPL-3.0 (copyleft, forces derivatives open),
-  none (all-rights-reserved default). **Needs-manual-action: owner picks;
-  not chosen on your behalf.**
-- CI (`.github/workflows/ci.yml`): ADDED — analyze + test + gitleaks on
-  push/PR, pinned SHAs (verified in official repos:
-  actions/checkout@8e8c483db84b4fee98b60c0593521ed34d9990e8 (v6.0.1),
+- `LICENSE`: MIT present since commit `f8d5b96` (verified: full MIT text,
+  copyright holder set). Resolved.
+- CI (`.github/workflows/ci.yml`): analyze + test + gitleaks on
+  push/PR, pinned SHAs (verified in official repos, re-checked for this
+  reconciliation, including the corrected checkout SHA
+  `8e8c483db84b4bee98b60c0593521ed34d9990e8` = v6.0.1 tag:
+  actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 (v6.0.1),
   subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 (v2.23.0),
   gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e (v3.0.0)),
   `permissions: contents: read`, JDK 17 (repo workaround), no secrets used.
@@ -352,28 +372,22 @@ policies carry WITH CHECK; no policy uses `true` for authenticated/anon.
 
 ---
 
-## §7 Needs-manual-action (numbered, do these in order)
+## §7 Needs-manual-action (remaining production hygiene — none blocks keeping the repo public)
 
-1. **Rotate the service_role key FIRST** (blocking verdict): Dashboard →
-   Settings → API Keys → create new secret key → update the Edge Function
-   secret (`supabase secrets set SERVICE_ROLE_KEY=...`) → confirm the app
-   delete-flow still works → retire the old key. Official procedure:
-   https://supabase.com/docs/guides/api/api-keys#rotate-a-leaked-or-compromised-key
-2. `supabase db push` the new hardening migration (timezone cooldown, pause
-   bounds, invite alphabet, size lock, nudge-day check).
-3. Run extended `docs/rls_tests.sql` + `docs/squad_rls_tests.sql` live;
-   fix anything red before continuing.
+1. ~~Rotate the service_role key~~ — **done** (owner-confirmed; old key retired).
+2. ~~Push hardening migration~~ — **done** (owner-confirmed live).
+3. ~~Run RLS + squad SQL tests live~~ — **done** (owner-confirmed green).
 4. Supabase dashboard: confirm email verification ON; set strong minimum
    password length (Auth → Policies); review rate limits + enable CAPTCHA
    (Auth → Bot and Abuse Protection); disable unused auth providers;
    confirm no storage bucket is public unless intended; review API settings;
    run Security + Performance advisors
    (`/dashboard/project/_/advisors/security`) and fix findings.
-5. Create the upload keystore + `android/key.properties`; build the signed
-   `.aab`; verify the signature is the upload key (not debug); upload to
-   internal testing.
+5. ~~Signed AAB/APK with upload key + smoke test~~ — **done** (v1.0.0
+   published, upload-key signature verified against release notes,
+   smoke-tested on device).
 6. Host `docs/PRIVACY.md` publicly; complete the Play data-safety form.
-7. Choose a LICENSE (MIT / Apache-2.0 / GPL-3.0 / none).
+7. ~~Choose a LICENSE~~ — **done** (MIT, commit `f8d5b96`).
 8. GitHub: enable secret scanning + push protection, private vulnerability
    reporting, branch protection on `main`, Dependabot alerts.
 9. Before end-2026: migrate `anon`/`service_role` to publishable/secret
