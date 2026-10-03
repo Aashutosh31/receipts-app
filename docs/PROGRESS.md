@@ -69,6 +69,20 @@
   read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
   tested or built.
 
+## Fixed (email-confirmation deep link)
+
+- Email confirmation redirected to localhost instead of the app. Signup now
+  passes `com.receipts.receipts://auth-callback` as `emailRedirectTo`
+  (shared constant in auth data layer); AndroidManifest registers the
+  custom scheme on MainActivity (verified merged into the release APK via
+  apkanalyzer); supabase_flutter's built-in deep-link observer
+  (`detectSessionInUri`, default on) exchanges the callback for a session
+  and the router auth guard takes over — no custom handler, iOS/web
+  structured for later. Regression tests cover the URI, matcher, and
+  manifest wiring. Owner manual step: allowlist the exact URI in Supabase
+  dashboard → Authentication → URL Configuration → Redirect URLs.
+- Tests: 145 green. Release APK builds with env.json.
+
 ## Fixed (excuse re-prompt loop)
 
 - Missed-day excuse sheet re-prompted for already-tagged misses, and the

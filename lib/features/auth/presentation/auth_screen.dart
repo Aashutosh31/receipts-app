@@ -151,8 +151,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             if (_confirmationPending) ...<Widget>[
               const SizedBox(height: 16),
               Text(
-                'Account created. Check your inbox to confirm your email, '
-                'then sign in.',
+                'Account created. Open the confirmation link on this device '
+                '— it signs you in automatically.',
                 style: theme.textTheme.bodyMedium,
               ),
             ],

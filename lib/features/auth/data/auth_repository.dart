@@ -3,6 +3,8 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'auth_callback.dart';
+
 /// Thrown for auth problems with a message safe to show in the UI.
 class AuthFailure implements Exception {
   const AuthFailure(this.message);
@@ -51,6 +53,10 @@ class SupabaseAuthRepository implements AuthRepository {
       final AuthResponse response = await _client.auth.signUp(
         email: email,
         password: password,
+        // Sends the confirmation email back into the app instead of
+        // localhost. The URI must also be allowlisted in the Supabase
+        // dashboard (Authentication > URL Configuration > Redirect URLs).
+        emailRedirectTo: kAuthCallbackUri,
       );
       return response.session != null;
     } on AuthException catch (e) {
