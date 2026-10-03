@@ -33,6 +33,10 @@ jobs:
       - run: flutter pub get
       - run: dart format --set-exit-if-changed .
       - run: flutter analyze
+      # Run tests in a non-UTC timezone: bare server dates must parse as UTC
+      # midnight regardless of device zone (see pending_excuses_test.dart).
       - run: flutter test
+        env:
+          TZ: Asia/Kolkata
       # gitleaks/gitleaks-action v3.0.0 (secret scan of full history)
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e

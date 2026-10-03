@@ -29,7 +29,11 @@ Future<void> showPendingExcuses({
     builder: (BuildContext sheetContext) =>
         _ExcuseFlow(contractId: contractId, pending: pending),
   );
+  // Refresh both the raw excuses and the derived pending list so a filed
+  // miss disappears from the queue immediately and deterministically, even
+  // if a rebuild interleaves before the refetch lands.
   ref.invalidate(excusesProvider);
+  ref.invalidate(pendingExcusesProvider(contractId));
 }
 
 class _ExcuseFlow extends ConsumerStatefulWidget {
@@ -74,6 +78,9 @@ class _ExcuseFlowState extends ConsumerState<_ExcuseFlow> {
             reason: _reason!,
             freeText: _note.text,
           );
+      // Refresh filed excuses right away so any rebuild during the
+      // multi-step flow (or after it) sees this submission immediately.
+      ref.invalidate(excusesProvider);
       if (!mounted) {
         return;
       }

@@ -1,3 +1,20 @@
+## Excuse re-prompt fix (missed-day/excuse flow)
+
+1. **Two compounding defects**: (a) live DB carried a single-column
+   UNIQUE on excuses.commitment_id (absent from repo migrations — likely
+   created out-of-band), rejecting every second excuse per commitment;
+   (b) `Excuse.fromMap` parsed bare server DATEs with
+   `DateTime.parse(...).toUtc()`, which yields local midnight and shifts
+   the calendar day on non-UTC devices, so filed excuses never matched
+   pending misses and the sheet re-prompted forever.
+2. **Migration is defensive against both live states**: drops the wrong
+   single-column constraint if present, adds the composite only if missing
+   (checked via pg_constraint definition match).
+3. **Canonical bare-date parsing is `parseServerDay`** (explicit UTC
+   midnight, never touches the device zone). Applied to excuse, pause, and
+   letter date fields. CI now runs `flutter test` under TZ=Asia/Kolkata so
+   this bug class stays visible.
+
 ## Security-hardening migration (audit F-06, F-07, F-08, F-13, F-14)
 
 1. **Timezone cooldown is 7 days**: the grace-window exploit needs two flips

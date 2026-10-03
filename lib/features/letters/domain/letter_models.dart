@@ -2,6 +2,8 @@
 // which returns null while locked; the app never reads letter bodies
 // directly (column grants forbid it).
 
+import '../../ledger/domain/ledger_models.dart' show parseServerDay;
+
 /// Milestone unlock days supported by the database check constraint.
 const List<int> letterMilestones = <int>[0, 30, 60, 90];
 
@@ -24,7 +26,8 @@ class LetterEntry {
     return LetterEntry(
       id: map['id'] as String,
       unlockDayNumber: (map['unlock_day_number'] as num).toInt(),
-      unlockDate: DateTime.parse(map['unlock_date'] as String).toUtc(),
+      // Bare server DATE: parse as UTC midnight (see Excuse.fromMap).
+      unlockDate: parseServerDay(map['unlock_date'] as String),
       isUnlocked: map['is_unlocked'] as bool,
       body: map['body'] as String?,
     );

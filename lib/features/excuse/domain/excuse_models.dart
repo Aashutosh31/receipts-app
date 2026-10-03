@@ -1,5 +1,7 @@
 // Pure excuse domain. Reason names match the public.excuse_reason enum.
 
+import '../../ledger/domain/ledger_models.dart' show parseServerDay;
+
 /// Allowed reasons, matching the database enum exactly.
 enum ExcuseReason { tired, busy, unmotivated, forgot, other }
 
@@ -23,7 +25,11 @@ class Excuse {
     return Excuse(
       id: map['id'] as String,
       commitmentId: map['commitment_id'] as String,
-      day: DateTime.parse(map['day'] as String).toUtc(),
+      // Server DATEs are bare YYYY-MM-DD strings. They must be parsed as
+      // UTC midnight explicitly: DateTime.parse on a bare date yields LOCAL
+      // midnight, and .toUtc() then shifts the calendar day on non-UTC
+      // devices, which silently broke pending-miss matching.
+      day: parseServerDay(map['day'] as String),
       reason: ExcuseReason.values.firstWhere(
         (ExcuseReason r) => r.name == (map['reason'] as String),
         orElse: () => ExcuseReason.other,

@@ -1,6 +1,8 @@
 // Immutable contract-domain models. UI never calls Supabase directly;
 // repositories in ../data wrap Supabase calls (AGENTS.md architecture).
 
+import '../../ledger/domain/ledger_models.dart' show parseServerDay;
+
 enum ContractModeDto { hard, kind }
 
 enum ContractStatus { active, completed, abandoned }
@@ -112,10 +114,11 @@ class Pause {
       contractId: map['contract_id'] as String,
       userId: map['user_id'] as String,
       type: map['type'] as String,
-      startDay: DateTime.parse(map['start_day'] as String).toUtc(),
+      // Bare server DATEs must parse as UTC midnight (see Excuse.fromMap).
+      startDay: parseServerDay(map['start_day'] as String),
       endDay: map['end_day'] == null
           ? null
-          : DateTime.parse(map['end_day'] as String).toUtc(),
+          : parseServerDay(map['end_day'] as String),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }

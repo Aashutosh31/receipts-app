@@ -69,6 +69,22 @@
   read-only Ledger, sick/injury pause flow, sign-out. No Stage 3+ features
   tested or built.
 
+## Fixed (excuse re-prompt loop)
+
+- Missed-day excuse sheet re-prompted for already-tagged misses, and the
+  resubmit failed on live `excuses_commitment_id_key`. Two compounding
+  causes: (a) live DB carried a single-column UNIQUE on
+  excuses.commitment_id (absent from repo migrations), blocking every
+  second excuse per commitment — new migration
+  `20261003115051_fix_excuses_unique_per_day.sql` drops it if present and
+  enforces UNIQUE (commitment_id, day); (b) `Excuse.fromMap` parsed bare
+  server DATEs via local-midnight `DateTime.parse().toUtc()`, shifting the
+  day on non-UTC devices so filed excuses never matched pending misses —
+  fixed by canonical `parseServerDay` (also applied to pause/letter dates).
+  Sheet now invalidates pending state explicitly after close and after each
+  submit. Regression tests reproduce the exact bug (proven failing pre-fix
+  under TZ=Asia/Kolkata); CI runs tests under non-UTC TZ. Tests: 141 green.
+
 ## Fixed (auth-cascade delete bypass)
 
 - Production delete-account failed with 25001 because the contract
