@@ -9,13 +9,34 @@ import java.util.Properties
 
 // Release signing follows the official Flutter deployment guide:
 // a local key.properties (gitignored, see key.properties.example) feeds a
-// `release` signing config; without it, release builds fall back to debug
-// keys so local `--release` runs keep working.
+// `release` signing config with the Receipts upload keystore
+// (alias receipts-upload). Release builds fail fast with a clear error when
+// the file is missing instead of silently shipping a debug-signed build.
 // See: https://docs.flutter.dev/deployment/android#signing-the-app
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+val isReleaseBuild = gradle.startParameter.taskNames.any {
+    it.contains("Release", ignoreCase = true)
+}
+if (isReleaseBuild && !keystorePropertiesFile.exists()) {
+    throw GradleException(
+        "Release signing requires android/key.properties with " +
+            "storePassword, keyPassword, keyAlias and storeFile. " +
+            "Copy android/key.properties.example to get started. " +
+            "The file is gitignored and must never be committed."
+    )
+}
+for (key in listOf("storePassword", "keyPassword", "keyAlias", "storeFile")) {
+    if (isReleaseBuild && !keystoreProperties.containsKey(key)) {
+        throw GradleException(
+            "android/key.properties is missing required key \"$key\". " +
+                "See android/key.properties.example."
+        )
+    }
 }
 
 android {
@@ -51,19 +72,6 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
-        release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                // TODO: create android/key.properties (see key.properties.example)
-                // and sign real releases with the upload key. Debug keys here
-                // exist only so `flutter run --release` works without secrets.
-                signingConfigs.getByName("debug")
-            }
-        }
-    }
-
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
@@ -72,6 +80,14 @@ android {
                 storeFile = file(keystoreProperties["storeFile"] as String)
                 storePassword = keystoreProperties["storePassword"] as String
             }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Always the upload keystore. Missing credentials fail fast
+            // above; debug keys are never used for release.
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
