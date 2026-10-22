@@ -101,7 +101,7 @@ kotlin {
 dependencies {
     // Required by flutter_local_notifications v10+ (desugaring).
     // See: https://pub.dev/packages/flutter_local_notifications#gradle-setup
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 flutter {
